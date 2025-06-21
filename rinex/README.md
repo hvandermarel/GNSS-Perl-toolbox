@@ -6,11 +6,9 @@ The subdirectory rinex contains Perl scripts and libraries for pre-processing RI
 
 RINEX observation file editing, filtering and conversion for RINEX version 2, 3 and 4 observation files.
 
-By typing  
+### Usage instructions
 
-> rnxedit -h
-
-in a terminal (`./rnxedit.pl -h` on some systems) elementary help is provided: 
+By typing `rnxedit -h` in a terminal (or `./rnxedit.pl -h` on some systems) elementary help is provided: 
 
 ```
 rnxedit                                            (Version: 20250616)
@@ -95,6 +93,35 @@ different translation profiles (GRES125 and GPS12).
 Delft University of Technology.
 ```
 
+### Comparison with other tools (`teqc`, `gfzrnx`)
+
+The `rnxedit` tool was inspired by Unavco's `teqc` and GFZ's `gfzrnx`, but doesn't share any of the code. For a comparison of the three tools:
+
+- `teqc` only operates on RINEX version 2 files, can create RINEX version 2 from raw data files, and do quality control
+- `rnxedit` and `teqc` can edit RINEX header data using command line options (`gfzrnx` uses crux files for this)
+- all three tools can do filtering
+- `gfzrnx` and `rnxedit` can convert between RINEX versions, `teqc` cannot
+- `rnxedit` and `teqc` are single pass and can be used in pipes, `gfzrnx` reads all data in memory first and tends to be more heavy on resources than the two other tools
+- `teqc` and `gfzrnx` are more capable in their own domain and have more options than `rnxedit`
+- `teqc` is no anymore supported
+- the free version of `gfzrnx` cannot be used for production work
+  
+In short, `rnxedit` can be used only for relatively simple and common tasks, but combines the "best" from `teqc` and `gfzrnx`.
+
+### Motivation and development history
+
+When in 2011 the first RINEX version 3 files came around tools did not initially exist to convert the - at that time badly supported - RINEX version 3 files to version 2. 
+At the same time it was clear that Unavco's `teqc` would never support RINEX version 3.
+This motivated me in 2011 to write a set of Perl scripts and functions for reading, writing and converting RINEX files. This became the initial version of `rnxedit`, then known as `rnx2to3.pl` (which could also do the conversion in the other direction), and precursor libraries for `librnxio.pl` (called `rnxio.pl`) and `librnxsys.pl` (called `rnxsub.pl`). 
+Soon after `gfzrnx` came around and we started to use `gfzrnx` for production work. The `rnx2to3.pl` was only used for some special projects and as the basis for a tool (`rnxstats`) to produce observation counts and statistics.
+
+For the editing and checking of meta data in the RINEX observations files another Perl script was developed using header templates generated from a station meta-data XML database. This worked very well in a production environment, but for editing a single file it was not as convenient as the good old `teqc` for RINEX version 2, although still easier than using `gfzrnx` (for RINEX version 3).
+
+So in 2025, i decided to add editing and filtering capabilities to `rnx2to3.pl`, rename it to `rnxedit`, and release it as open source under a Apache 2 licence on github. 
+
+Another main motivation to develop `rnxedit` is that `teqc` is not anymore supported, and that `gfzrnx` is now licensed under a more restrictive license not allowing production work with the free version, that `gfzrnx` tends to be rather heavy on system resources (compared to `teqc` and `rnxedit`), and there is no source code available for `gfzrnx` and `teqc`. 
+
+To me, `rnxedit` is intended as replacement for `teqc` and `gfzrnx`, not for everything, but only the most common operations (98% of the work). For all three tools, `teqc`, `gfzrnx` and `rnxedit`, there are jobs for which it is the "right" tool. 
 
 ## RINEX observation statistics - `rnxstats`
 
