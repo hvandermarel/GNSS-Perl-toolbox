@@ -11,7 +11,7 @@ The subdirectory `rinex` contains Perl scripts for pre-processing RINEX observat
 - **rnxstats**: RINEX observation statistics with number of epochs, satellites and observations
 
 and Perl libraries **librnxio.pl** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`)
-and **librnxsys.pl** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`)
+and **librnxsys.pl** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`).
 
 ### GNSS date and time conversion
 
