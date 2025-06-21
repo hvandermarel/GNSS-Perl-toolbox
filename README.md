@@ -5,12 +5,13 @@ GNSS Perl toolbox with rinex editing and statistics, time conversions, and other
 
 ### RINEX file editing, filtering and conversion
 
-The subdirectory `rinex` contains two useful Perl scripts for handling RINEX files
+The subdirectory `rinex` contains Perl scripts for pre-processing RINEX observation files
 
 - **rnxedit**: RINEX observation file editing, filtering and conversion for RINEX version 2, 3 and 4 observation files
 - **rnxstats**: RINEX observation statistics with number of epochs, satellites and observations
 
-and a Perl library **librnxio** with functions for reading and writing RINEX version 2, 3 and 4 observation files and **librnxsys** with functions for RINEX observation handling and converting between RINEX version 2 and 3.
+and Perl libraries **librnxio.pl** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`)
+and **librnxsys.pl** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`)
 
 ### GNSS date and time conversion
 
