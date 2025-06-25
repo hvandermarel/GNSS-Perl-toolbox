@@ -27,8 +27,38 @@
 #              - options for filtering (window, decimation and system)
 #              - many major, minor and cosmetic changes
 #              - moved some functions to librnxsys.pl
+#              - initial release on github as v0.9-alpha
+#           22 June 2025 by Hans van der Marel
+#              - checked with strict pragma and filled in missing declararions
+#              - added editing of receiver type, number and firmware version
+#              - added editing of approximate position
+#              - added Apache 2.0 license notice
+#              - more elaborate check on ouput rinex version
+#              - strict is now default, option hidden from users
+#              - option -s is now used as shortcut for -satsys
+#              - added default record for mandatory SYS / PHASE SHIFT in v3.01-3.05
+#              - idem for mandatory GLONASS COD/PHS/BIS in v3.02-3.05
+#              - idem for mandatory GLONASS SLOT / FRQ in v3.02 onwards, using 
+#                newly added functions in librnxsys.pl with glonass.cfg file
+#           25 June 2025 by Hans van der Marel
+#              - cfgfile option hidden from user as it is not yet implemented
+#              - updated analyze function 
+#              - filenames on the command line is now working
+#              - beta0 release on github
 #
-# (c) 2011-2025 Hans van der Marel, Delft University of Technology
+# Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 use vars qw( $VERSION );
 use Getopt::Long;
@@ -36,22 +66,25 @@ use File::Basename;
 use Time::Local;
 use lib dirname (__FILE__);
 
+use warnings;
+use strict;
+
 require "librnxio.pl";
 require "librnxsys.pl";
 
-$VERSION = 20250616;
+$VERSION = 20250625;
 
-$fherr=*STDERR;
+my $fherr=*STDERR;
 
 # Process the options
 
 Getopt::Long::Configure( "prefix_pattern=(-|\/)" );
-$Result = GetOptions( \%Config,
+my %Config=();
+my $Result = GetOptions( \%Config,
                       qw(
                         help|?|h
-                        strict|s
                         donothing|n
-                        verbose|v
+                        verbose|v+
                         version|r=s
                         outputdir|o=s
                         cfgfile|c=s
@@ -63,13 +96,17 @@ $Result = GetOptions( \%Config,
                         antennanumber|an=s
                         antennadelta|ad=s
                         antennaheight|ah=s
+                        positionxyz|ap=s
+                        receivertype|rt=s
+                        receivernumber|rn=s
+                        receiverfw|rv=s
                         agency|oa=s
                         operator|op=s
                         runby|or=s
                         begin|b=s
                         end|e=s
                         int|i=s
-                        satsys|sys=s
+                        satsys|s=s
                       ) );
 $Config{help} = 1 if ( ! $Result  );
 
@@ -79,61 +116,69 @@ if( $Config{help} )
     exit();
 }
 
-$versoutopt="cc";
+my $versoutopt="cc";
 if ( exists($Config{version}) ) {
    $versoutopt=$Config{version};
 }
 
-$verbose=0;
-if ( exists($Config{donothing}) ) {
-   $verbose=1;
-}
+my $verbose=0;
 if ( exists($Config{verbose}) ) {
-   $verbose++;
+   $verbose=$Config{verbose};
+} else {
+   $Config{verbose}=$verbose;
 }
+
+$Config{strict}=1;            # Default is strict (no option)
 
 # Get all the filenames
 
 if ( scalar @ARGV ) {
   # Process the files on the command line
   # The original file is renamed to <file>.orig 
-  @files=();
-  foreach $file ( @ARGV ) {
+  my @files=();
+  foreach my $file ( @ARGV ) {
     # print STDERR "$file\n";
-    @exp=glob($file);
+    my @exp=glob($file);
     @exp=sort(@exp);
     push @files,@exp;
   }
   # Parse the rinex file
-  foreach $file ( @files ) {
-    # update files (and rename old files)
-    $inputfile = $file;
-    if ( exists($Config{outputdir}) ) {
-       # check if $Config{outputdir} is directory and exists
-       # move file into $Config{outputdir}
-       $outputfile = $Config{outputdir}."/".$file;
-    } else {
-       $outputfile = "$file.tmp.$$";
-    }
-    my $versout=$versoutopt;
+  foreach my $inputfile ( @files ) {
     if ( exists($Config{donothing}) ) {
-       analyzernx($inputfile,$versout) || warn "Error in analyzernx.";
+       print $fherr "\n\n*** Analyzing $inputfile ***\n\n";
+       analyzernx($inputfile,$versoutopt);
     } else {
-       convertrnx($inputfile,$outputfile,$versout) || warn "Error in convertrnx.";
-#      Needs some better error checking here
-#      if ( !exists($Config{outputdir}) ) {
-#        rename($file,$file.".orig");
-#        rename($outputfile,$file);
-#      }
+       # set temporary output filename
+       my $tmpoutputfile = "$inputfile.tmp.$$";
+       my $outputfile = $inputfile;
+       if ( exists($Config{outputdir}) ) {
+          # check if $Config{outputdir} is directory and exists
+          if ( -d $Config{outputdir} ) {
+             # include $Config{outputdir} in output file name
+             $tmpoutputfile = $Config{outputdir}."/".$tmpoutputfile;
+             $outputfile = $Config{outputdir}."/".$inputfile;
+          } else {
+             die "Output directory $Config{outputdir} does not exist, abort...\n";
+          }
+       }
+       print STDOUT "Editing $inputfile ->  $outputfile";
+       convertrnx($inputfile,$tmpoutputfile,$versoutopt) || warn "Error in convertrnx.";
+#      On success, rename output and input file
+       if ( -e $outputfile ) {
+          print STDOUT ", renamed $outputfile to $outputfile.orig";
+          rename($outputfile,$outputfile.".orig");
+       }
+       rename($tmpoutputfile,$outputfile);
+       print STDOUT ", done\n";
     }
   }
 } else {
    # Read from standard input and write to standard output
    my $versout=$versoutopt;
    if ( exists($Config{donothing}) ) {
-      analyzernx("-",$versout);
+      analyzernx("-",$versoutopt);
    } else {
-      convertrnx("-","-",$versout);
+      convertrnx("-","-",$versoutopt);
    }
 }
 
@@ -149,21 +194,13 @@ $Line
 Edit, filter and convert RINEX observation files.
 Syntax: 
 
+    $Script -? 
     $Script [-options] RINEX_observation_file(s) 
     $Script [-options] < inputfile > outputfile  
     cat inputfile | $Script [-options] > outputfile 
     
 If no RINEX observation file(s) are given on the command line, the script reads 
 from the standard input and writes to standard output. 
-
-General options:
-
-    -?|h|help..........This help
-    -o outputdir.......Output directory, if not given, any filenames specified
-                       on the commandline will be overwritten (the originals
-                       will be saved with an extra extention .orig)
-    -r #[.##]..........RINEX output version, default is to output the same 
-                       version as the input file
 
 Header editing options:
 
@@ -172,8 +209,12 @@ Header editing options:
     -mt markertype.....String with marker type (only relevant for rinex-3) 
     -at antennatype....String with antenna type and radome
     -an antennanumber..String with antenna number
-    -ad antennadelta...Comma separated values for antenna delta U/E/N [m]
+    -ad antennadelta...Comma separated values for antenna delta U,E,N [m]
     -ah antennaheight..Value for antenna height [m] (eccentricity unchanged)
+    -ap positionxyz... Comma separated values for approximate position X,Y,Z [m]
+    -rt receivertype...String with receiver type
+    -rn receivernumber.String with receiver number
+    -rv receiverfw.....String with receiver firmware version
     -oa agency.........String with observer agency
     -op operator.......String with observer name
     -or runby..........String with agency or person running this program
@@ -183,32 +224,38 @@ Filtering options:
     -b starttime.......Observation start time [yyyy-mm-dd[ T]]hh:mm[:ss]
     -e endtime.........Observation end time [yyyy-mm-dd[ T]]hh:mm[:ss]
     -i interval........Observation interval [sec] 
-    -sys satsys........Satellite systems to include [GRECJS]
+    -s satsys..........Satellite systems to include [GRECJS]
 
-Rinex version 2/3 conversion options:
+Rinex version 2/3+ conversion options:
 
-    -c cfgfile.........Name of optional configuration file, overrides the standard 
-                       rinex 2/3 conversion tables hardwired in the program
-    -n.................Do nothing. Only analyze the headers and give feedback
-                       on the translated observation types; VERY USEFUL option
-                       to check if you agree with the conversion of observation
-                       types before proceeding with actual conversion!
-    -s.................Enforce strict format rules (without this option the 
-                       old version observation type records are kept)
+    -r #[.##]..........RINEX output version, default is to output the same 
+                       version as the input file
     -x receiverclass...Receiver class (overrides receiver type) for conversion:
                           GPS12    Only include GPS L1 and L2 observations
                           GPS125   Only include GPS L1, L2 and L5 observations
                           GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+    -n.................Do nothing. Only analyze the headers and give feedback
+                       on the translated observation types; useful to check if you 
+                       agree with the conversion of observation types before 
+                       proceeding with actual conversion!
+
+General options:
+
+    -?|h|help..........This help
+    -o outputdir.......Output directory, if not given, any filenames specified
+                       on the commandline will be overwritten (the originals
+                       will be saved with an extra extention .orig)
+    -v                 Verbose (increase verbosity level)
 
 Examples:
 
     cat MX5C1340.25O | $Script -mo ZANDMOTOR -mn ZAND -ah 1.023 > zand1340.25o
 
     cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | $Script -mo ZANDMOTOR -mn ZAND \
-       -ah 1.023 -b 7:30 -e 8:20 -i 30 -sys GRE > ZAND00NLD_R_20251340730_50M_30S_MO.rnx 
+       -ah 1.023 -b 7:30 -e 8:20 -i 30 -s GRE > ZAND00NLD_R_20251340730_50M_30S_MO.rnx 
 
     cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | $Script -mo ZANDMOTOR -mn ZAND \
-       -ah 1.023 -r 2 -x GRES125 -sys GRS > zand1340.25o
+       -ah 1.023 -r 2 -x GRES125 -s GRS > zand1340.25o
 
     cat MX5C1340.25O | $Script -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x GPS12 \
         -b 7:30 -e 8:20 > ZAND00NLD_R_20251340730_50M_10S_MO.rnx
@@ -222,9 +269,12 @@ version 3 file is edited and filtered. The third and fourth example includes
 conversion to RINEX version 2.11 and version 3.00 files respectively, using
 different translation profiles (GRES125 and GPS12).
 
-(c) 2011-2025 by Hans van der Marel (H.vanderMarel\@tudelft.nl)
-Delft University of Technology.
+(c) 2011-2025 by Hans van der Marel, Delft University of Technology.
 EOT
+
+# Unimplemented options (as of yet):
+#    -c cfgfile.........Name of optional configuration file, overrides the standard 
+#                       rinex 2/3 conversion tables hardwired in the program
 
 }
 
@@ -237,42 +287,61 @@ sub analyzernx{
   #
   # (c) Hans van der Marel, Delft University of Technology.
 
-  my ($inputfile,$versout)=@_;
+  my ($inputfile,$versoutopt)=@_;
 
-  # Open the RINEX observation files for reading and writing
+  # Open the RINEX observation file 
 
   my ($fhin);
-
   if ($inputfile ne "-" ) {
     open($fhin, "< $inputfile") or die "can't open $inputfile: $!";
   } else {
     # read from STDIN 
     $fhin=*STDIN;
   }
-  
   binmode($fhin);
 
-  # Read the RINEX ID line 
+  # Read the RINEX ID line, header and after that close the file
 
   my ($versin,$mixedfile,$idrec)=ReadRnxId($fhin,"O");
-  if ( $versout =~ /^cc$/ ) {
-     $versout=$versin;
-  } elsif ( ( $versin < 3.00 ) &&  ( ( $versout >= 3.00 ) || ( $versout =~ /^\s*$/ ) ) ) {
-     $versout=3.00;
-  } elsif ( ( $versin >= 3.00 ) &&  ( ( $versout < 3.00 ) || ( $versout =~ /^\s*$/ ) ) ) {
-     $versout=2.11;
+  my $rnxheaderin=ReadRnxHdr($fhin);
+  close($fhin) or die "can't close $inputfile: $!";
+
+  # Check/analyze version, set ouput version
+
+  my ($versout,$mainversout,$mainversin) = setversout($versin,$versoutopt);
+
+  # Read and analyze the RINEX header (with temporarily increased verbosity)
+  
+  $verbose++; 
+  my ($receivertype,$obsid3,$obsid2)=ScanRnxHdr($rnxheaderin);
+  my $rnxheadertmp=$rnxheaderin;
+  my $colidx=[];
+  if ( $mainversout ne $mainversin ) {
+     ($obsid2,$obsid3,$colidx,$rnxheadertmp)=CnvRnxHdr($versin,$versout,$rnxheaderin,$Config{markertype},$mixedfile);
   } else {
-     $versout=$versin;
+     print $fherr "Main input and output version are the same (mainversion=$mainversout),\n";
+     print $fherr "input version $versin, output version $versout, no major conversion needed.\n\n";
+  }
+  $verbose--; 
+
+  # Set filter options and adjust header accordingly
+  my ($windowopt,$rnxheadertmp2)=FilterOptions($rnxheadertmp,\%Config);
+  if ( $windowopt->{windowing} || $windowopt->{decimate} ) {
+     print $fherr "\n\nFiltering is active:\n";
+     print $fherr "Time of first obs: ".gmtime($windowopt->{begin})."\n";
+     print $fherr "Time of last obs: ".gmtime($windowopt->{end})."\n";
+     print $fherr "Windowing: $windowopt->{windowing} \n";
+     print $fherr "Decimate: $windowopt->{decimate}\n";
   }
 
-  # Read, convert and write the RINEX header
+  # Edit the rinex header
+  my $rnxheaderout=EdtRnxHdr($rnxheadertmp2);
 
-  my $rnxheaderin=ReadRnxHdr($fhin);
-  my ($obsid2,$obsid3,$colidx,$rnxheaderout)=CnvRnxHdr($versin,$versout,$rnxheaderin,$Config{markertype},$mixedfile);
+  # Print the rinex header
 
-  # Close the RINEX observation files
-
-  close($fhin) or die "can't close $inputfile: $!";
+  print $fherr "\n\nModified RINEX header:\n\n";
+  WriteRnxId($fherr,$versout,"O",$idrec,$Config{runby});
+  WriteRnxHdr($fherr,$rnxheaderout);
   
 }
 
@@ -286,7 +355,7 @@ sub convertrnx{
   # (c) Hans van der Marel, Delft University of Technology.
 
 
-  my ($inputfile,$outputfile,$versout)=@_;
+  my ($inputfile,$outputfile,$versoutopt)=@_;
 
   # Open the RINEX observation files for reading and writing
   # --------------------------------------------------------
@@ -312,17 +381,9 @@ sub convertrnx{
   # -----------------------------------------------------------------------------------
 
   my ($versin,$mixedfile,$idrec)=ReadRnxId($fhin,"O");
-  if ( $versout =~ /^cc$/ ) {
-     $versout=$versin;
-  } elsif ( ( $versin < 3.00 ) &&  ( ( $versout >= 3.00 ) || ( $versout =~ /^\s*$/ ) ) ) {
-     $versout=3.00;
-  } elsif ( ( $versin >= 3.00 ) &&  ( ( $versout < 3.00 ) || ( $versout =~ /^\s*$/ ) ) ) {
-     $versout=2.11;
-  } else {
-     $versout=$versin;
-  }
+  my ($versout,$mainversout,$mainversin) = setversout($versin,$versoutopt);
 
-  WriteRnxId($fhout,$versout,"O",$idrec);
+  WriteRnxId($fhout,$versout,"O",$idrec,$Config{runby});
   
   # Read, convert and write the RINEX header
   # ----------------------------------------
@@ -332,7 +393,8 @@ sub convertrnx{
   my ($receivertype,$obsid3,$obsid2)=ScanRnxHdr($rnxheaderin);
   # Optionally convert the RINEX header to different format
   my $rnxheadertmp=$rnxheaderin;
-  if ( $versout ne $versin ) {
+  my $colidx=[];
+  if ( $mainversout ne $mainversin ) {
      #my ($obsid2,$obsid3,$colidx,$rnxheaderout)=CnvRnxHdr($versin,$versout,$rnxheaderin,$Config{markertype},$mixedfile);
      ($obsid2,$obsid3,$colidx,$rnxheadertmp)=CnvRnxHdr($versin,$versout,$rnxheaderin,$Config{markertype},$mixedfile);
   }
@@ -345,7 +407,7 @@ sub convertrnx{
      print $fherr "Decimate: $windowopt->{decimate}\n";
   }
   # Edit and write the RINEX header
-  $rnxheaderout=EdtRnxHdr($rnxheadertmp2);
+  my $rnxheaderout=EdtRnxHdr($rnxheadertmp2);
   WriteRnxHdr($fhout,$rnxheaderout);
   
   # Parse and convert the observation data 
@@ -354,6 +416,7 @@ sub convertrnx{
   my ($epoch,$epoflag,$clkoffset,$nsat);
   my $data=[];
   my $skipped=[];
+  my $obsid2upd=[];
 
   while ( ! eof($fhin) ) {
 
@@ -404,7 +467,7 @@ sub convertrnx{
 
     # Reorder the columns (in case of different input and output versions)
 
-    if ( ( $versout ne $versin ) && $keep && ( ($epoflag <= 1) || ($epoflag == 6) ) ) {
+    if ( ( $mainversout ne $mainversin ) && $keep && ( ($epoflag <= 1) || ($epoflag == 6) ) ) {
       # Have observation data, re-order the fields in $data
       $data=ReorderRnxData($data,$colidx);
       $nsat=scalar(@{$data});
@@ -443,6 +506,10 @@ sub EdtRnxHdr{
   #   antennanumber|an=s
   #   antennadelta|ad=s
   #   antennaheigt|ah=s
+  #   positionxyz|ap=s
+  #   receivertype|rt=s
+  #   receivernumber|rn=s
+  #   receiverfw|rv=s
   #   agency|oa=s
   #   operator|op=s
   #
@@ -479,6 +546,20 @@ sub EdtRnxHdr{
        if ( exists($Config{antennaheight}) ) {
             substr($line,0,14)=sprintf("%14.4f",$Config{antennaheight});
        }
+       push @rnxheaderout,sprintf("%-60.60s%-20.20s",substr($line,0,60),$headid);
+    } elsif ( $headid =~ /^REC # \/ TYPE \/ VERS/ ) { 
+       if ( exists($Config{receivernumber}) ) {
+            substr($line,0,20)=sprintf("%-20.20s",$Config{receivernumber});
+       }
+       if ( exists($Config{receivertype}) ) {
+            substr($line,20,20)=sprintf("%-20.20s",$Config{receivertype});
+       }
+       if ( exists($Config{receiverfw}) ) {
+            substr($line,40,20)=sprintf("%-20.20s",$Config{receiverfw});
+       }
+       push @rnxheaderout,sprintf("%-60.60s%-20.20s",substr($line,0,60),$headid);
+    } elsif ( $headid =~ /^APPROX POSITION XYZ/ && exists($Config{positionxyz}) ) {
+       substr($line,0,42)=sprintf("%14.4f%14.4f%14.4f",split(/,/,$Config{positionxyz}));
        push @rnxheaderout,sprintf("%-60.60s%-20.20s",substr($line,0,60),$headid);
     } elsif ( $headid =~ /^OBSERVER \/ AGENCY/ ) {
        if ( exists($Config{operator}) ) {
@@ -663,7 +744,7 @@ sub FilterOptions{
 
 sub CnvRnxHdr{
 
-  # Convert the RINEX header from version 2 into version 3 or vice versa
+  # Convert the RINEX header from version 2 into version 3+ or vice versa
   # Usuage
   #  
   #    my ($obsid2,$obsid3,$colidx,$rnxheaderout)=CnvRnxHdr($versin,$versout,$rnxheaderin,$markertype,$mixedfile);
@@ -678,7 +759,7 @@ sub CnvRnxHdr{
 
   my ($receivertype,$obsid3,$obsid2)=ScanRnxHdr($rnxheaderin);
  
-  # prepare the RINEX 2 and RINEX3 observation type information
+  # prepare the RINEX 2 and RINEX3+ observation type information
 
   my $receiverclass=$receivertype;
   if ( exists($Config{receiverclass}) ) {
@@ -691,13 +772,13 @@ sub CnvRnxHdr{
     print $fherr (  "Selected receiver type:     ", $selectedrcvrtype, "\n\n" ); 
     print $fherr ("Signal type definitions for ", $selectedrcvrtype, "\n\n"); 
     prtsignaldef($fherr,$signaltypes);
-  }
-  if ( $verbose > 1 ) {
     print $fherr ("\nConversion table for RINEX version 2 to 3\n\n"); 
     prttypedef($fherr,$cnvtable2to3);
     print $fherr ("\nConversion table for RINEX version 3 to 2\n\n"); 
     prttypedef($fherr,$cnvtable3to2);
   }
+
+  # Observation type translation
 
   my $colidx={};
 
@@ -738,6 +819,7 @@ sub CnvRnxHdr{
      if ( $hadobstype3 == 0 ) {
         die "RINEX 3 file has no type 3 observation type record";
      } 
+     my $colidx2=[];
      if ( $hadobstype2 == 0 ) {
        # convert RINEX3 observation type into RINEX2 types
        my $obsid2p;
@@ -769,26 +851,22 @@ sub CnvRnxHdr{
 #  } else {
 #	 $colidx=XXXXXXX
   }
-  my @comments=();
-  for my $line (@cnvtable) {
-     push @comments, sprintf("%-60.60s%-20.20s",$line,"COMMENT");
-  }
 
   # Modify and copy the header lines
 
   my $rnxheaderout=();
-  
   if ( $versin < 3.00 && $versout > 2.99 ) {
      # Version 2 -> 3
-     $rnxheaderout=CnvRnxHdr2to3($rnxheaderin,$obsid3,\%Config);
-     splice @{$rnxheaderout},-1,0,@comments;
+     $rnxheaderout=CnvRnxHdr2to3($rnxheaderin,$obsid3,\%Config,$versout,\@cnvtable);
+     #splice @{$rnxheaderout},-1,0,@comments;
   } elsif ( $versin > 2.99 && $versout < 3.00 ) {
      # Version 3 -> 2
-     $rnxheaderout=CnvRnxHdr3to2($rnxheaderin,$obsid2,\%Config);
-     splice @{$rnxheaderout},-1,0,@comments;
+     $rnxheaderout=CnvRnxHdr3to2($rnxheaderin,$obsid2,\%Config,$versout,\@cnvtable);
+     #splice @{$rnxheaderout},-1,0,@comments;
   } else {
-     # Verbatim (same version)
+     # Verbatim (same major version)
      @{$rnxheaderout}=@{$rnxheaderin};
+     # need to make minor adjustments between versions 3 and 4
    }
    
   return ($obsid2,$obsid3,$colidx,$rnxheaderout);
@@ -800,7 +878,7 @@ sub CnvRnxHdr2to3{
   # Convert the RINEX header from version 2 into version 3 
   # Usuage
   #  
-  #    my $rnxheaderout=CnvRnxHdr2to3($rnxheaderin,$obsid3,$config);
+  #    my $rnxheaderout=CnvRnxHdr2to3($rnxheaderin,$obsid3,$config,$versout,$cnvtable);
   #
   # with @rnxheaderin a pointer to an array with RINEX2 header lines,
   # $obsid3 the pointer to the hash structure with RINEX3 observation types,
@@ -810,13 +888,14 @@ sub CnvRnxHdr2to3{
   #
   # (c) Hans van der Marel, Delft University of Technology.
   
-  my ($rnxheaderin,$obsid3,$config)=@_;
+  my ($rnxheaderin,$obsid3,$config,$versout,$cnvtable)=@_;
   
   my @rnxheaderout=();
    
   my $hadmarkerrecord=0;
   my $hadmarkertype=0;
   my $haveinsertedrnx3types=0;
+  my $haveremovedrnx2types=0;
 
   foreach my $line (@{$rnxheaderin}) {
 
@@ -836,20 +915,58 @@ sub CnvRnxHdr2to3{
 
     # Insert RINEX 3 observation types just before the type 2 observation types
     if ( $headid =~ /^# \/ TYPES OF OBSERV/ && $haveinsertedrnx3types == 0) {
+      for my $line (@$cnvtable) {
+        push @rnxheaderout, sprintf("%-60.60s%-20.20s",$line,"COMMENT");
+      }
       push @rnxheaderout,fmtobshead3($obsid3);
+      if ( $config->{strict} && $versout >= 3.01 && $versout <= 3.05 ) {
+          # Insert default SYS / PHASE SHIFT records for compability, mandatory with 
+          # version 3.01-3.05, introduced with 3.01, but strongly depricated with version 4
+          for my $sysid ( sysids($obsid3) ) {
+             push @rnxheaderout,sprintf("%-60.60s%-20.20s",$sysid,"SYS / PHASE SHIFT");
+          } 
+      } 
       $haveinsertedrnx3types=1;
     }
   
     # Copy existing records, while changing obsolete records to comments
-    if  (   exists($config->{strict}) && 
+    if  (   $config->{strict} && 
           ( $headid =~ /^WAVELENGTH FACT L1\/2/  || 
             $headid =~ /^# \/ TYPES OF OBSERV/    )  ) {
+      if ( $headid =~ /^WAVELENGTH FACT L1\/2/  || ( $headid =~ /^# \/ TYPES OF OBSERV/ && $haveremovedrnx2types == 0 ) ) {
+         push @rnxheaderout,sprintf("%-60.60s%-20.20s","OBSOLETE RINEX-V2 ".$headid." :","COMMENT");
+         $haveremovedrnx2types=1 if ( $headid =~ /^# \/ TYPES OF OBSERV/ );
+      }
       push @rnxheaderout,sprintf("%-60.60s%-20.20s",substr($line,0,60),"COMMENT");
     } else {
       push @rnxheaderout,$line;
     }
   }
- 
+
+  if ( $config->{strict} && $versout >= 3.02 && $versout <= 3.05 ) {
+     # Insert default GLONASS COD/PHS/BIS record for compability, mandatory with 
+     # version 3.02-3.05, introduced with 3.02, but strongly depricated with version 4
+     splice @rnxheaderout,-1,0,sprintf("%-60.60s%-20.20s","","GLONASS COD/PHS/BIS");
+  } 
+  my $glonasscfg = dirname(__FILE__) . "/glonass.cfg";
+  if ( $config->{strict} && $versout >= 3.02 && -e $glonasscfg ) {
+     # Insert GLONASS SLOT / FRQ records, mandatory since version 3.02, requires
+     # libglonass.pl Perl module
+     my $dateoffirstobs;
+     foreach my $line (@{$rnxheaderin}) {
+         if ( uc(substr($line,60)) =~ /^TIME OF FIRST OBS/ ) {
+            $dateoffirstobs = sprintf("%04d-%02d-%02d",split(" ",substr($line,0,18)));
+            #print STDERR "$dateoffirstobs\n";
+            last;
+         }
+     }
+     my $glosat = glonassdata($dateoffirstobs,$glonasscfg);
+     if ( $config->{verbose} > 1 ) {
+        prtglonassdata($glosat);
+     }
+     splice @rnxheaderout,-1,0,glonassslothdr($glosat);
+  } 
+
   return \@rnxheaderout;
     
 }
@@ -859,7 +976,7 @@ sub CnvRnxHdr3to2{
   # Convert the RINEX header from version 3 into version 2 
   # Usuage
   #  
-  #    my $rnxheaderout=CnvRnxHdr3to2($rnxheaderin,$obsid2,$config);
+  #    my $rnxheaderout=CnvRnxHdr3to2($rnxheaderin,$obsid2,$config,$versout,$cnvtable);
   #
   # with @rnxheaderin a pointer to an array with RINEX3 header lines,
   # $obsid2 the pointer to the array structure with RINEX2 observation types,
@@ -868,11 +985,12 @@ sub CnvRnxHdr3to2{
   #
   # (c) Hans van der Marel, Delft University of Technology.
   
-  my ($rnxheaderin,$obsid2,$config)=@_;
+  my ($rnxheaderin,$obsid2,$config,$versout,$cnvtable)=@_;
   
   my @rnxheaderout=();
    
   my $hasinsertedtype2=0;
+  my %haveremovedrnx3types=();
   
   foreach my $line (@{$rnxheaderin}) {
 
@@ -880,15 +998,37 @@ sub CnvRnxHdr3to2{
 
     # Insert RINEX 2 observation types just before the type 3 observation types
     if ( ($hasinsertedtype2 == 0) && ( $headid =~ /^SYS \/ # \/ OBS TYPES/) ) {
+      for my $line (@$cnvtable) {
+        push @rnxheaderout, sprintf("%-60.60s%-20.20s",$line,"COMMENT");
+      }
       push @rnxheaderout,fmtobshead2($obsid2);
       $hasinsertedtype2=1;
     }
 
-    # Copy existing records
-    if  (   exists($config->{strict}) && 
-          ( $headid =~ /^MARKER TYPE/  || 
-            $headid =~ /^SYS \/ # \/ OBS TYPES/   )   ) {
-      # if statement needs to be completed with all new rinex 3 headers TO DO !
+    # Copy existing records, while changing future version records to comments
+    if  (   $config->{strict} && 
+          ( $headid =~ /^MARKER TYPE/              || 
+            $headid =~ /^SYS \/ # \/ OBS TYPES/    ||
+            $headid =~ /^SYS \/ PHASE SHIFT/       ||
+            $headid =~ /^GLONASS SLOT \/ FRQ/      ||
+            $headid =~ /^GLONASS COD\/PHS\/BIS/    ||
+            $headid =~ /^ANTENNA\: DELTA X\/Y\/Z/  || 
+            $headid =~ /^ANTENNA\:PHASECENTER/     ||
+            $headid =~ /^ANTENNA\: B.SIGHT XYZ/    ||
+            $headid =~ /^ANTENNA\: ZERODIR AZI/    ||
+            $headid =~ /^ANTENNA\: ZERODIR XYZ/    ||
+            $headid =~ /^CENTER OF MASS\: XYZ/     ||
+            $headid =~ /^SIGNAL STRENGTH UNIT/     ||
+            $headid =~ /^SYS \/ DCBS APPLIED/      ||
+            $headid =~ /^SYS \/ PCVS APPLIED/      ||
+            $headid =~ /^SYS \/ SCALE FACTOR/      ||
+            $headid =~ /^DOI/                      ||
+            $headid =~ /^LICENSE OF USE/           ||
+            $headid =~ /^STATION INFORMATION/   )   ) {
+      if ( ! exists($haveremovedrnx3types{$headid}) ) {
+         push @rnxheaderout,sprintf("%-60.60s%-20.20s","COMMENTED OUT RINEX-V3 ".$headid." :","COMMENT");
+         $haveremovedrnx3types{$headid}=1;
+      }
       push @rnxheaderout,sprintf("%-60.60s%-20.20s",substr($line,0,60),"COMMENT");
     } else {
       push @rnxheaderout,$line;
@@ -898,5 +1038,67 @@ sub CnvRnxHdr3to2{
   return \@rnxheaderout;
   
 }
+
+sub setversout{
+   
+   my ($versin,$versoutopt) =@_;
+   
+   my $mainversin = $versin < 2.99 ? 2 : 3;  # $mainversin is 2 or 3 (even for version 4)
+   my $mainversout;  
+   my $versout;
+   if ( $versoutopt =~ /^cc$/ ) {
+      # output version is the same as the input version
+      $mainversout=$mainversin;
+      $versout=$versin;
+   } elsif ( $versoutopt =~ /^\s*$/ ) {
+     # main output version is the opposite of the main input version
+     $mainversout = $mainversin == 2 ? 3 : 2;  
+     $versout = checkrnxversion($mainversout);    # use default version 2 or 3
+  } elsif ( $versoutopt =~ /^[234]$/ ) {
+     if ( $versin =~ /^$versoutopt/ ) {
+        # output version is the same as input version if main version matches
+        $mainversout=$mainversin;
+        $versout=$versin;
+     } else {
+        # main version different from input, version is set to the default for the main output version
+        $mainversout = $versout == 2 ? 2 : 3;  
+        $versout = checkrnxversion($versoutopt);
+     } 
+  } else {
+     $mainversout = $versoutopt < 2.99 ? 2 : 3; # $mainversout is 2 or 3 (even for version 4)
+     $versout = checkrnxversion($versoutopt);
+  } 
+  
+  return $versout, $mainversout, $mainversin;
+
+}
+
+sub checkrnxversion{
+
+   my ($version)=@_;
+
+   $version="2.11" if ( $version =~/^2$/ );
+   $version="3.00" if ( $version =~/^3$/ );
+   $version="4.02" if ( $version =~/^4$/ );
+
+   my $ok=0; $ok=1 if ( $version =~ /^(2.11|3\.0[0-5]|4\.0[0-3])$/ );
+   if ( ! $ok ) {
+      my $versold=$version;
+      $version="2.11" if ( $version =~/^2.*$/ );
+      $version="3.04" if ( $version =~/^3.*$/ );
+      $version="4.02" if ( $version =~/^4.*$/ );
+      my $ok=0; $ok=1 if ( $version =~ /^(2.11|3\.0[0-5]|4\.0[0-2])$/ );
+      if ( $ok ) {
+         print STDERR "Warning: Unknown rinex version $versold, will use $version instead.\n";
+      } else {
+         print STDERR "Error: Unsupported rinex version $versold, aborting.\n";
+         die;
+      }
+   }
+   
+   return $version;
+}
+
+
 
 

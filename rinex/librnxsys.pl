@@ -49,6 +49,11 @@
 #   Return an array with logically sorted system ids present in the input hash
 #      @sysids=sysids($signaltypes)
 #
+#   Return GLONASS slot number, SVN and sensor name
+#      $glosat = glonassdata($date,$cfgfile);
+#      prtglonassdata($glosat);
+#      @header = glonassslothdr($glosat);
+#
 #   Data structures and variables:
 #   ------------------------------
 #
@@ -118,6 +123,26 @@
 #   @{$signals}      - array with 2-char signal types for a particular system
 #   @sysids          - array with logically sorted system ids (sysids output)
 #
+#   Examples
+#   --------
+#
+#   Return GLONASS slot number, SVN and sensor name
+#
+#    #!/bin/perl
+#
+#    use File::Basename;
+#    use lib dirname (__FILE__);
+#    require "libglonass.pl";
+#
+#    my $glosat = glonassdata($ARGV[0],"glonass.cfg");
+# 
+#    prtglonassdata($glosat);
+#
+#    my @header = glonassslothdr($glosat);
+#    foreach my $line (@header) {
+#       print $line."\n";
+#    }
+#
 # Created:   9 September 2011 by Hans van der Marel
 # Modified: 11 February 2012 by Hans van der Marel
 #              - Public version for testing
@@ -128,8 +153,30 @@
 #              - moved functions from rnxedit to this library
 #              - refactored and modified several functions
 #              - updated the description in the header
+#           22 June 2025 by Hans van der Marel
+#              - checked with strict pragma and filled in missing declararions
+#              - added Apache 2.0 license notice
+#              - functions to retrieve GLONASS SVN, slot number and sensor name
+#           25 June 2025 by Hans van der Marel
+#              - use tell and seek to rewind DATA to original position so that
+#                reading this section multiple times work
 #
-# (c) 2011-2025 Hans van der Marel, Delft University of Technology.
+# Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+use strict;
+use warnings;
 
 sub prtobstype2{
 
@@ -179,7 +226,7 @@ sub prtobstype3{
 
   my ($fh,$obsid3)=@_;
 
-  print $fherr ("\nRINEX 3 observation types (output):\n\n"); 
+  print $fh ("\nRINEX 3 observation types (output):\n\n"); 
 
   #foreach my $sysid (keys(%{$obsid3})) {
   foreach my $sysid (sysids($obsid3)) {
@@ -252,12 +299,12 @@ sub prtobshead3{
       my $i1=0;
       my $i2= $nobs3 >= $i1+13 ? $i1+13 : $nobs3;
       my $obsid3str=join(" ",@obsid3list[$i1...$i2-1]);
-      printf $fh ("%1s  %3d %-52.52s SYS / # / OBS TYPES \n",$sysid,$nobs3,$obsid3str)  or die "can't write to $new: $!";      
+      printf $fh ("%1s  %3d %-52.52s SYS / # / OBS TYPES \n",$sysid,$nobs3,$obsid3str)  or die "can't write to output file: $!";      
       for (my $i=0; $i < int(($nobs3-1)/13); $i++) {
          $i1=$i1+13;
          $i2= $nobs3 >= $i1+13 ? $i1+13 : $nobs3;
          $obsid3str=join(" ",@obsid3list[$i1...$i2-1]);
-         printf $fh ("       %-52.52s SYS / # / OBS TYPES \n",$obsid3str)  or die "can't write to $new: $!";      
+         printf $fh ("       %-52.52s SYS / # / OBS TYPES \n",$obsid3str)  or die "can't write to output file: $!";      
       }
    }
 
@@ -383,7 +430,7 @@ sub obstype2to3{
     my $j=0;
     foreach my $obstype2 (@$obsid2) {
       if ( exists($cnvtable2to3->{$sysid}->{$obstype2}) ) {
-        $obstype3=$cnvtable2to3->{$sysid}->{$obstype2};
+        my $obstype3=$cnvtable2to3->{$sysid}->{$obstype2};
         push @{$obsid3->{$sysid}} , $obstype3;
         push @{$obs2idx->{$sysid}} , $j;
       }
@@ -451,7 +498,7 @@ sub obstype3to2{
     $obs2idx->{$sysid}=();
     foreach my $obstype3 (@{$obsid3->{$sysid}}) {
       if ( exists($cnvtable3to2->{$sysid}->{$obstype3}) && $cnvtable3to2->{$sysid}->{$obstype3} !~ m/^\s*$/ ) {
-        $obstype2=$cnvtable3to2->{$sysid}->{$obstype3};
+        my $obstype2=$cnvtable3to2->{$sysid}->{$obstype3};
         if ( ! exists($tmpid2->{$obstype2}) ) {
            $tmpid2->{$obstype2}=$k;
            $k++;
@@ -463,13 +510,13 @@ sub obstype3to2{
 
   # make the index to entries in the RINEX3 observations
 
-  $nan=-99;
+  my $nan=-99;
   foreach my $sysid (@sysids) {
     $obs2idx->{$sysid}=();
     my $j=0;
     foreach my $obstype3 (@{$obsid3->{$sysid}}) {
       if ( exists($cnvtable3to2->{$sysid}->{$obstype3}) && $cnvtable3to2->{$sysid}->{$obstype3} !~ m/^\s*$/ ) {
-        $obstype2=$cnvtable3to2->{$sysid}->{$obstype3};
+        my $obstype2=$cnvtable3to2->{$sysid}->{$obstype3};
         push @{$obs2idx->{$sysid}} , $tmpid2->{$obstype2};
       } else {
         push @{$obs2idx->{$sysid}} , $nan;     
@@ -643,7 +690,7 @@ sub invobsidx{
     }
   }
   my @tmp3idx=();
-  for ($i=0; $i<$nobs2; $i++) {
+  for ( my $i=0; $i<$nobs2; $i++ ) {
      push @tmp3idx, $nan;
   }
   foreach my $sysid (sysids($obs2idx)) {
@@ -729,11 +776,11 @@ sub ReorderRnxData{
     my $newrec=substr($orgrec,0,3);
     my $inew=0;
     my $lastobs=int((length($orgrec)-4)/16)+1;
-    #print $fherr "$orgrec\n";
-    #print $fherr "$lastobs\n";
+    #print STDERR "$orgrec\n";
+    #print STDERR "$lastobs\n";
     $orgrec.="  ";
     foreach my $iold (@{$obsidx->{$sysid}}) {
-      #print $fherr "--> $i $inew  $iold \n";
+      #print STDERR "--> $i $inew  $iold \n";
       if ( ( $iold != $nan ) && ( $iold <= $lastobs ) ) {
         $newrec.=substr($orgrec,$iold*16+3,16);
       } else {
@@ -785,7 +832,8 @@ sub obstypedef{
      $cnvtable3to2->{$sysid}={};
      for my $na ( split(" ",$signaltypes->{$sysid}) ) {
         for my $t ( split(//,"CLDS") ) {
-           $id3=$t.$na;
+           my $id3=$t.$na;
+           my $id2;
            if ( ( $t =~ /C/ ) && ( $na =~ /^\d[PWDYM]$/ ) ) {
              $id2="P".substr($na,0,1);
            } else {
@@ -859,6 +907,7 @@ sub signaldef{
   my $ini = {};
   my $header;
      
+  my $data_start = tell DATA; # save the position
   while (<DATA>) {
     chomp;
     # ignore blank lines
@@ -877,6 +926,7 @@ sub signaldef{
       $ini->{$header}->{$1} = $2;
     }
   }
+  seek DATA, $data_start, 0;  # reposition the filehandle right past __DATA__
 
   # the data could be printed as $ini->{SECTION_HEADER}->{key}
   #for my $sysid ( keys(%{$ini->{$rcvrtype}}) ) {
@@ -887,10 +937,10 @@ sub signaldef{
   $rcvrtype =~ s/^\s*|\s*$//g;
   $rcvrtype=uc($rcvrtype);
   if ( ! exists($ini->{$rcvrtype}) ) {
-     print $fherr ("\n+------------------------------------------------------+\n");
-     print $fherr   ("| WARNING: RECEIVER TYPE NOT FOUND, SELECTED DEFAULT!! |\n");
-     print $fherr   ("|           -- USE AT YOUR OWN RISK --                 |\n");
-     print $fherr   ("+------------------------------------------------------+\n");
+     print STDERR ("\n+------------------------------------------------------+\n");
+     print STDERR   ("| WARNING: RECEIVER TYPE NOT FOUND, SELECTED DEFAULT!! |\n");
+     print STDERR   ("|           -- USE AT YOUR OWN RISK --                 |\n");
+     print STDERR   ("+------------------------------------------------------+\n");
      $rcvrtype="DEFAULT";
   }
 
@@ -936,13 +986,108 @@ sub sysids{
 
   my ($signaltypes)=@_;
   
-  my $sysidall="GRECJIS";
   my $sysidin=join("",keys(%{$signaltypes}));
+  my $sysidall="GRECJIS";
   $sysidall   =~ s/[^$sysidin]//g ;
-  @sysids=split(//,$sysidall);
+  
+  my @sysids=split(//,$sysidall);
   
   return @sysids;
 
+}
+
+sub glonassdata{
+
+  # Return hash of array reference with all active GLONASS satellites at 
+  # a specific data, with slot number (ifrq), SVN and sensor name.
+  # Usuage
+  #  
+  #    my $glosat = glonassdata($date);
+  #
+  # with $date a string with YYYY-MM-DD or YYYYMMDD format. Output is
+  # a refererence to a hash of arrays, which is accessed as
+  #
+  #     ( $svn, $sensor, $ifrq ) = $glosat->{$prn}
+  #
+  #  with $prn the GLONASS PRN number "R##".
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($date,$glofile) = @_;
+  $date =~ s/-//g;
+  
+  my %glosat=();
+  
+  open(GLONASS, $glofile) or die("Could not open file $glofile.");
+  while (my $line = <GLONASS>) { 
+     # print $line; 
+     chomp $line;
+     next if ( $line =~ /^#/ || $line =~ /^\s*$/ ); 
+     my ($prn,$svn,$number,$start,$end,$sensor,$ifrq) = split(" ",$line);
+     $start =~ s/-//g;
+     $end =~ s/-//g;
+     $end =~ s/current/99999999/;
+     if ( $date > $start && $date < $end ) {
+        $glosat{$prn} = [ $svn, $sensor, $ifrq ];
+     }
+  }
+  close GLONASS;
+  
+  return \%glosat;
+}
+
+sub prtglonassdata{
+
+  # Print GLONASS prn, svn, sensor name and slot number. 
+  # Usuage
+  #  
+  #    my $glosat = glonassdata($date);
+  #    prtglonassdata($glosat);
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($glosat) = @_;
+  
+  printf("prn   svn   sensor        ifrq\n---   ---   -----------   ----\n");
+  foreach my $prn ( sort keys %$glosat ) {
+    printf("%3s   %3s   %-12.12s   %3s\n",$prn,$glosat->{$prn}[0],$glosat->{$prn}[1],, $glosat->{$prn}[2]);
+  }
+  printf("\n");
+ 
+  return;
+}
+
+sub glonassslothdr{
+
+  # Return an array with RINEX header lines with "GLONASS SLOT / FRQ" records.
+  # Usuage
+  #  
+  #    my $glosat = glonassdata($date);
+  #    my @header = glonassslothdr($glosat);
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($glosat) = @_;
+
+  # 11 R04  6 R05  1 R06 -4 R11  0 R12 -1 R13 -2 R14 -7 R21  4 GLONASS SLOT / FRQ #
+  #    R22 -3 R23  3 R24  2                                    GLONASS SLOT / FRQ #
+
+  my @header=();
+  my $count=0;
+  my $line=sprintf("%3.0f ", scalar(%$glosat) );
+  foreach my $prn ( sort keys %$glosat ) {
+    if ( $count >= 8 ) {
+       push @header, sprintf("%-60.60s%-20.20s",$line,"GLONASS SLOT / FRQ #");
+       $line="    ";
+       $count=0;
+    }
+    $line .= sprintf("%-3.3s%3.0f ",$prn,$glosat->{$prn}[2]);
+    $count++;
+  }
+  push @header, sprintf("%-60.60s%-20.20s",$line,"GLONASS SLOT / FRQ #");
+
+  return @header;
+  
 }
 
 1;

@@ -60,8 +60,27 @@
 #              - renamed package to librnxio.pl (was rnxio.pl)
 #           20 June 2025 by Hans van der Marel
 #              - minor (cosmetic) updates
+#           22 June 2025 by Hans van der Marel
+#              - checked with strict pragma
+#              - added optional $runby argument to WriteRnxId sub
+#              - added Apache 2.0 license notice
 #
-# (c) 2011-2025 Hans van der Marel, Delft University of Technology
+# Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+use strict;
+use warnings;
 
 sub ReadRnxId{
 
@@ -119,19 +138,22 @@ sub WriteRnxId{
   # Usuage
   #  
   #    WriteRnxId($fhout,$rnxvers,$type,$idrec);
+  #    WriteRnxId($fhout,$rnxvers,$type,$idrec,$runby);
   #
   # with $fhout the file handle, $type the file type (e.g. "O"), $rnxvers the
   # version string, $mixed a 1-char flag indication mixed observation files,
-  # and $idrec the RINEX header record.
+  # and $idrec the RINEX header record. The optional argument $runby is the
+  # person or agency doing the conversion, otherwise the default is to use
+  # the 'USERNAME' or 'USER' environment variable. 
   #
   # (c) Hans van der Marel, Delft University of Technology.
 
-  my ($fhout,$rnxvers,$type,$idrec)=@_;
+  my ($fhout,$rnxvers,$type,$idrec,$runby)=@_;
 
   my $DATE=sprintf("%04d%02d%02d %02d%02d%02d UTC",(gmtime)[5]+1900,(gmtime)[4]+1,(gmtime)[3,2,1,0]);
   my $USER=$ENV{'USER'};
   $USER=$ENV{'USERNAME'} if (exists($ENV{'USERNAME'}) ) ;
-  $USER=$Config{runby} if (exists($Config{runby}) ) ;
+  $USER=$runby if ( defined($runby) ) ;
   my ( $SCRIPT ) = ( $0 =~ m#([^\\/]+)$# ); $SCRIPT =~ s#\.pl$##;
 
   substr($idrec,0,9)=sprintf("%9.2f",$rnxvers);
