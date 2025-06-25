@@ -11,36 +11,32 @@ RINEX observation file editing, filtering and conversion for RINEX version 2, 3 
 By typing `rnxedit -h` in a terminal (or `./rnxedit.pl -h` on some systems) elementary help is provided: 
 
 ```
-rnxedit                                            (Version: 20250616)
+rnxedit                                            (Version: 20250625)
 -------
 Edit, filter and convert RINEX observation files.
-Syntax: 
+Syntax:
 
-    rnxedit [-options] RINEX_observation_file(s) 
-    rnxedit [-options] < inputfile > outputfile  
-    cat inputfile | rnxedit [-options] > outputfile 
-    
-If no RINEX observation file(s) are given on the command line, the script reads 
-from the standard input and writes to standard output. 
+    rnxedit -?
+    rnxedit [-options] RINEX_observation_file(s)
+    rnxedit [-options] < inputfile > outputfile
+    cat inputfile | rnxedit [-options] > outputfile
 
-General options:
-
-    -?|h|help..........This help
-    -o outputdir.......Output directory, if not given, any filenames specified
-                       on the commandline will be overwritten (the originals
-                       will be saved with an extra extention .orig)
-    -r #[.##]..........RINEX output version, default is to output the same 
-                       version as the input file
+If no RINEX observation file(s) are given on the command line, the script reads
+from the standard input and writes to standard output.
 
 Header editing options:
 
     -mo markername.....String with marker name
     -mn markernumber...String with marker number
-    -mt markertype.....String with marker type (only relevant for rinex-3) 
+    -mt markertype.....String with marker type (only relevant for rinex-3)
     -at antennatype....String with antenna type and radome
     -an antennanumber..String with antenna number
-    -ad antennadelta...Comma separated values for antenna delta U/E/N [m]
+    -ad antennadelta...Comma separated values for antenna delta U,E,N [m]
     -ah antennaheight..Value for antenna height [m] (eccentricity unchanged)
+    -ap positionxyz... Comma separated values for approximate position X,Y,Z [m]
+    -rt receivertype...String with receiver type
+    -rn receivernumber.String with receiver number
+    -rv receiverfw.....String with receiver firmware version
     -oa agency.........String with observer agency
     -op operator.......String with observer name
     -or runby..........String with agency or person running this program
@@ -49,42 +45,48 @@ Filtering options:
 
     -b starttime.......Observation start time [yyyy-mm-dd[ T]]hh:mm[:ss]
     -e endtime.........Observation end time [yyyy-mm-dd[ T]]hh:mm[:ss]
-    -i interval........Observation interval [sec] 
-    -sys satsys........Satellite systems to include [GRECJS]
+    -i interval........Observation interval [sec]
+    -s satsys..........Satellite systems to include [GRECJS]
 
-Rinex version 2/3 conversion options:
+Rinex version 2/3+ conversion options:
 
-    -c cfgfile.........Name of optional configuration file, overrides the standard 
-                       rinex 2/3 conversion tables hardwired in the program
-    -n.................Do nothing. Only analyze the headers and give feedback
-                       on the translated observation types; VERY USEFUL option
-                       to check if you agree with the conversion of observation
-                       types before proceeding with actual conversion!
-    -s.................Enforce strict format rules (without this option the 
-                       old version observation type records are kept)
+    -r #[.##]..........RINEX output version, default is to output the same
+                       version as the input file
     -x receiverclass...Receiver class (overrides receiver type) for conversion:
                           GPS12    Only include GPS L1 and L2 observations
                           GPS125   Only include GPS L1, L2 and L5 observations
                           GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+    -n.................Do nothing. Only analyze the headers and give feedback
+                       on the translated observation types; useful to check if you
+                       agree with the conversion of observation types before
+                       proceeding with actual conversion!
+
+General options:
+
+    -?|h|help..........This help
+    -o outputdir.......Output directory, if not given, any filenames specified
+                       on the commandline will be overwritten (the originals
+                       will be saved with an extra extention .orig)
+    -v                 Verbose (increase verbosity level)
 
 Examples:
 
     cat MX5C1340.25O | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 > zand1340.25o
 
-    cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -mo ZANDMOTOR -mn ZAND 
-       -ah 1.023 -b 7:30 -e 8:20 -i 30 -sys GRE > ZAND00NLD_R_20251340730_50M_30S_MO.rnx 
+    cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -mo ZANDMOTOR -mn ZAND
+       -ah 1.023 -b 7:30 -e 8:20 -i 30 -s GRE > ZAND00NLD_R_20251340730_50M_30S_MO.rnx
 
-    cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -mo ZANDMOTOR -mn ZAND 
-       -ah 1.023 -r 2 -x GRES125 -sys GRS > zand1340.25o
+    cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -mo ZANDMOTOR -mn ZAND
+       -ah 1.023 -r 2 -x GRES125 -s GRS > zand1340.25o
 
-    cat MX5C1340.25O | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x GPS12 
+    cat MX5C1340.25O | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x GPS12
         -b 7:30 -e 8:20 > ZAND00NLD_R_20251340730_50M_10S_MO.rnx
 
     rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
 
 The first and last example are simple RINEX header edits; in the first example
 a new file is created and in the last example the existing file is overwritten
-(the original is saved with extension .orig). In the second example a RINEX 
+(the original is saved with extension .orig). In the second example a RINEX
 version 3 file is edited and filtered. The third and fourth example includes
 conversion to RINEX version 2.11 and version 3.00 files respectively, using
 different translation profiles (GRES125 and GPS12).
@@ -94,7 +96,10 @@ different translation profiles (GRES125 and GPS12).
 
 ### Perl dependencies
 
-The `librnxio.pl` and `librnxsys.pl` Perl libraries must be installed in the same directory as `rnxedit.pl`. Other dependecies of `rnxedit` are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are very common and included by most Perl distributions.
+The `librnxio.pl` and `librnxsys.pl` Perl libraries must be installed in the same directory as `rnxedit.pl`. 
+The file `glonass.cfg` is required for conversion from RINEX version 2.11 to version 3.02 and higher. This file must be present in the same directory as the script. 
+If you don't like to have these files in your search path, put the files in their own directory, and create a symbolic link to `rnxedit.pl`.
+Other dependecies of `rnxedit` are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are very common and included by most Perl distributions.
 
 ### RINEX compability
 
@@ -108,12 +113,13 @@ One defining characteristic of `rnxedit` and the underlying `librnxio` are that 
 Except for the header lines, all other blocks are only reshuffled in position or deleted, but the content itself is not modified.
 The only editing occurs in the headers, for spaces in the PRN number and century in the observation epoch. The observations, SSI and LLI indicators are not edited (though a whole block may be deleted, or spaces inserted).
 
-Marker name, number and type, antenna number, type, delta and height, agency and operator in the RINEX header lines may be edited depending on the input options. Other items in the header, such as time of first and last observation, interval and system records may be changed or deleted depending on the filtering options.
+Marker name, number and type, antenna number, type, delta and height, receiver type, receiver number, receiver version, agency and operator in the RINEX header lines may be edited depending on the input options. Other items in the header, such as time of first and last observation, interval and system records may be changed or deleted depending on the filtering options.
 When filtering has been selected, some new comment lines are added to the header detailing the filtering operation.  Unless conversion is selected, not other modification to the header is done.
 
-The most invasive operation is conversion between RINEX version 2 and 3: observation types are changed and 2-character codes are changed to 3-character codes, or vice versa.  Header record may be added or converted to COMMENTS, and COMMENT lines detailing the operation are added to the end of the header section, including a translation table between the 2- and 3-character codes.
+The most invasive operation is conversion between RINEX version 2 and 3+: observation types are changed and 2-character codes are changed to 3-character codes, or vice versa.  Header record may be added or converted to COMMENTS, and COMMENT lines detailing the operation are added to the end of the header section, including a translation table between the 2- and 3-character codes.
 
-A particular dilemma with upconverting from RINEX version 2 to 3 is how to provide information missing in version 2 for version 3. For the observation types this is hardwired into the code, and particular receiver classes or profiles can be selected from the command line. 
+A particular dilemma with upconverting from RINEX version 2 to 3+ is how to provide information missing in version 2 for version 3+. 
+Several scenarios for this are hardwired into the code, using receiver classes and more general profiles, which can be selected from the command line. 
 
 Some header records are mandatory, other are optional, and this has changed between versions:
 
@@ -166,15 +172,21 @@ LICENSE OF USE            4.00-
 STATION INFORMATION       4.00-
 ```
 
-When upconverting from RINEX version 2 to 3, the default rinex output is version `3.00`. 
+When upconverting from RINEX version 2 to 3+, the default rinex output is version `3.04` for version 3 and version `4.02` 
+for version 4. 
 From version `3.01` onwards additional information is needed, such as Glonass slot numbers and frequencies, 
 phase shifts and Glonass code and phase biases. From RINEX version 4 the latter two records
 are depricated, leaving only the Glonass slot numbers as missing information.
-Because of the "strong deprication" of phase shifts and Glonass code and phase biases, we feel this is not 
-a great miss for RINEX version 3.01 to 3.05 (although still mandatory according to the standard?).
-Therefore, the only real deviation form the standard for version `3.01` onwards are the missing Glonass slot
-numbers. Hence that the default RINEX 3 version is `3.00`, where these records are not yet part of the standard. 
+For version 3.01(3.02) to 3.05, where the phase shift and Glonass bias records are mandatory, we use blank values 
+for the phase shifts and Glonass code and phase biases to indicate that these are unknown, which is in
+agreement with the standard). Because of the "strong deprication" of these records in version 4 we consider this 
+not as a great miss.
 
+The only problem is when the Glonass slot numbers are missing (in input versions below 3.02). To cover
+this situation this software reads the file `glonass.cfg`, which contains a full history of slot numbers, 
+to obtain the slot number at the date of observation and insert these into the rinex header. This is a 
+solution that works well with older rinex version 2 files, but beware, when converting contemporary rinex
+version 2 files make sure to update the `glonass.cfg` file.
 
 ### Comparison with other tools (`teqc`, `gfzrnx`)
 
