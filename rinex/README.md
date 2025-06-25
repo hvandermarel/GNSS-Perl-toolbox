@@ -8,7 +8,7 @@ RINEX observation file editing, filtering and conversion for RINEX version 2, 3 
 
 ### Usage instructions
 
-By typing `rnxedit -h` in a terminal (or `./rnxedit.pl -h` on some systems) elementary help is provided: 
+By typing `rnxedit -h` in a terminal (or on some systems `./rnxedit.pl -h`) a brief instruction is provided: 
 
 ```
 rnxedit                                            (Version: 20250625)
@@ -94,37 +94,40 @@ different translation profiles (GRES125 and GPS12).
 (c) 2011-2025 by Hans van der Marel, Delft University of Technology.
 ```
 
-### Perl dependencies
+### Dependencies
 
 The `librnxio.pl` and `librnxsys.pl` Perl libraries must be installed in the same directory as `rnxedit.pl`. 
-The file `glonass.cfg` is required for conversion from RINEX version 2.11 to version 3.02 and higher. This file must be present in the same directory as the script. 
-If you don't like to have these files in your search path, put the files in their own directory, and create a symbolic link to `rnxedit.pl`.
+The file `glonass.cfg` is required for conversion from RINEX version 2.11 to version 3.02 and higher. Also this file must be installed in the same directory as the script. 
+If you don't like to have all these files in your search path, put the files in a separate directory and create a symbolic link to only `rnxedit.pl` from a directory in the search path.
+
 Other dependecies of `rnxedit` are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are very common and included by most Perl distributions.
 
 ### RINEX compability
 
-One defining characteristic of `rnxedit` and the underlying `librnxio` are that these only manipulate blocks of text. The basic text blocks are
+One defining characteristic of `rnxedit` and the underlying `librnxio` is that only blocks of text are manipulated. The basic text blocks are
 
-- RINEX header line (80 characters block)
-- RINEX observation epoch (25 or 27 character block), epoch flag (1 character) and optional receiver clock offset (15 character block) 
-- RINEX PRN number (3 characters block)
-- RINEX observation with SSI and LLI indicators (16 character block)
+- RINEX header line (80 characters)
+- RINEX observation epoch (25 or 27 characters), epoch flag (1 character) and optional receiver clock offset (15 characters) 
+- RINEX PRN number (3 characters)
+- RINEX observation with SSI and LLI indicators (16 characters)
 
-Except for the header lines, all other blocks are only reshuffled in position or deleted, but the content itself is not modified.
-The only editing occurs in the headers, for spaces in the PRN number and century in the observation epoch. The observations, SSI and LLI indicators are not edited (though a whole block may be deleted, or spaces inserted).
+These text blocks are only reshuffled to different positions in the file or removed, the content itself - except for of header lines - is not modified.
+The only editing occurs in the headers. The observations, SSI and LLI indicators are not edited (though a whole block may be removed or replaced by blanks). 
+The only exception is that spaces are filled in the PRN number and century information may be provide in dates when required by the rinex standard.
 
-Marker name, number and type, antenna number, type, delta and height, receiver type, receiver number, receiver version, agency and operator in the RINEX header lines may be edited depending on the input options. Other items in the header, such as time of first and last observation, interval and system records may be changed or deleted depending on the filtering options.
-When filtering has been selected, some new comment lines are added to the header detailing the filtering operation.  Unless conversion is selected, not other modification to the header is done.
+Marker name, number and type, antenna number, type, delta and height, receiver type, receiver number, receiver version, agency and operator in the RINEX header lines may be edited depending on the input options. Other items in the header, such as time of first and last observation, interval and system records may be changed or removed depending on the filtering options.
+When filtering is selected, a few new comment lines are added to the header detailing the filtering operation.  
 
-The most invasive operation is conversion between RINEX version 2 and 3+: observation types are changed and 2-character codes are changed to 3-character codes, or vice versa.  Header record may be added or converted to COMMENTS, and COMMENT lines detailing the operation are added to the end of the header section, including a translation table between the 2- and 3-character codes.
+The most invasive operation is conversion between RINEX version 2 and 3+. Observation types are changed and 2-character codes are changed to 3-character codes, or vice versa.  Header record may be added or converted to COMMENTS, and COMMENT lines detailing the operation are added to the header section, including a translation table between the 2- and 3-character codes.
 
-A particular dilemma with upconverting from RINEX version 2 to 3+ is how to provide information missing in version 2 for version 3+. 
+A dilemma with upconverting from RINEX version 2 to 3+ is not all information required for three character observation codes is available from version 2. For the reverse operation, it may not be clear which observations type to select.  
 Several scenarios for this are hardwired into the code, using receiver classes and more general profiles, which can be selected from the command line. 
 
-Some header records are mandatory, other are optional, and this has changed between versions:
+Another dilemma with upconverting from RINEX version 2 to 3+ is how to provide mandatory header information for version 3+ that might be missing in version 2.
+In RINEX observation files some header records are mandatory, others are optional, and records valid in one version may be invalid in another version, depending on the version used.
 
 ```
-                         valid    mandatory   
+                          valid       mandatory   
 RINEX VERSION / TYPE      2.10-       2.10-
 PGM / RUN BY / DATE       2.10-       2.10-
 COMMENT                   2.10-
@@ -174,26 +177,26 @@ STATION INFORMATION       4.00-
 
 When upconverting from RINEX version 2 to 3+, the default rinex output is version `3.04` for version 3 and version `4.02` 
 for version 4. 
-From version `3.01` onwards additional information is needed, such as Glonass slot numbers and frequencies, 
-phase shifts and Glonass code and phase biases. From RINEX version 4 the latter two records
-are depricated, leaving only the Glonass slot numbers as missing information.
-For version 3.01(3.02) to 3.05, where the phase shift and Glonass bias records are mandatory, we use blank values 
-for the phase shifts and Glonass code and phase biases to indicate that these are unknown, which is in
-agreement with the standard). Because of the "strong deprication" of these records in version 4 we consider this 
-not as a great miss.
 
-The only problem is when the Glonass slot numbers are missing (in input versions below 3.02). To cover
-this situation this software reads the file `glonass.cfg`, which contains a full history of slot numbers, 
-to obtain the slot number at the date of observation and insert these into the rinex header. This is a 
+From version `3.01` onwards additional header information is needed, such as Glonass slot numbers, 
+phase shift and Glonass bias records. From RINEX version 4 phase shift and Glonass bias records
+are depricated, leaving only the Glonass slot numbers as missing information in a conversion from rinex version 2.
+For version 3.01(3.02) to 3.05, the only versions where phase shift and Glonass bias records are mandatory, we use blank values 
+for the phase shifts and Glonass biases to indicate that these are unknown (in agreement with the standard). 
+Because of the "strong deprication" of these records in version 4 we consider this not as a great miss.
+
+The only problem is when the Glonass slot numbers are missing, which may happen in input versions below 3.02. To cover
+this situation all Glonass slot numbers that have been used in the past are provided in the file `glonass.cfg`, which is used
+by the software to insert the Glonass slot numbers at the date of observation into the rinex header. This is a 
 solution that works well with older rinex version 2 files, but beware, when converting contemporary rinex
-version 2 files make sure to update the `glonass.cfg` file.
+version 2 files make sure the `glonass.cfg` file is up to date.
 
 ### Comparison with other tools (`teqc`, `gfzrnx`)
 
 The `rnxedit` tool was inspired by Unavco's `teqc` and GFZ's `gfzrnx`, but doesn't share any of the code. For a comparison of the three tools:
 
-- `teqc` only operates on RINEX version 2 files, can create RINEX version 2 from raw data files, and do quality control
-- `rnxedit` and `teqc` can edit RINEX header data using command line options (`gfzrnx` uses crux files for this)
+- `teqc` only operates on RINEX version 2 files, can create RINEX version 2 from raw data files, but does quality control that none of the other two tools can do
+- `rnxedit` and `teqc` can edit RINEX header data using command line options (`gfzrnx` uses crux files)
 - all three tools can do filtering
 - `gfzrnx` and `rnxedit` can convert between RINEX versions, `teqc` cannot
 - `rnxedit` and `teqc` are single pass and can be used in pipes, `gfzrnx` reads all data in memory first and tends to be more heavy on resources than the two other tools
@@ -206,22 +209,21 @@ In short, `rnxedit` can be used only for relatively simple and common tasks, but
 
 ### Motivation and development history
 
-When in 2011 the first RINEX version 3 files came around tools did not initially exist to convert the - at that time badly supported - RINEX version 3 files to version 2. 
+When in 2011 the first RINEX version 3 files came around not that many tools existed to handle the new format or conversion to the - at that time - much better supported version .
 At the same time it was clear that Unavco's `teqc` would never support RINEX version 3.
-This motivated me in 2011 to write a set of Perl scripts and functions for reading, writing and converting RINEX files. This became the initial version of `rnxedit`, then known as `rnx2to3.pl` (which could also do the conversion in the other direction), and precursor libraries for `librnxio.pl` (called `rnxio.pl`) and `librnxsys.pl` (called `rnxsub.pl`). 
-Soon after `gfzrnx` came around and we started to use `gfzrnx` for production work. The `rnx2to3.pl` was only used for some special projects and as the basis for a tool (`rnxstats`) to produce observation counts and statistics.
+This motivated me in 2011 to write a set of Perl scripts and functions for reading, writing and converting RINEX files. This became the initial version of `rnxedit`, then known as `rnx2to3.pl` (despite the name a two way convertor), and precursor libraries for `librnxio.pl` (called `rnxio.pl`) and `librnxsys.pl` (called `rnxsub.pl`). 
+Soon after `gfzrnx` came around i started to use `gfzrnx` for production work. The `rnx2to3.pl` was only used for some special projects, but the underlying code was used as the basis for a new tool (called `rnxstats`) to produce observation counts and statistics.
 
-For the editing and checking of meta data in the RINEX observations files another Perl script was developed using header templates generated from a station meta-data XML database. This worked very well in a production environment, but for editing a single file it was not as convenient as the good old `teqc` for RINEX version 2, although still easier than using `gfzrnx` (for RINEX version 3).
+For the editing and checking of meta data in RINEX observations files another Perl script was developed using header templates generated from a station meta-data XML database. This worked very well in a production environment, but for editing a few files from the command line it was not as convenient as the good old `teqc`.
+So in 2025, i decided to add editing and filtering capabilities to `rnx2to3.pl`, rename it to `rnxedit` and release it as open source under a Apache 2 licence on github. 
 
-So in 2025, i decided to add editing and filtering capabilities to `rnx2to3.pl`, rename it to `rnxedit`, and release it as open source under a Apache 2 licence on github. 
+Another main motivation to develop `rnxedit` is that `teqc` is not anymore supported, while `gfzrnx` is now licensed under a more restrictive license not allowing production work with the free version and tends to be rather heavy on system resources (compared to `teqc` and `rnxedit`). Also, no source code is available for `gfzrnx` and `teqc`, which i find another drawback.
 
-Another main motivation to develop `rnxedit` is that `teqc` is not anymore supported, and that `gfzrnx` is now licensed under a more restrictive license not allowing production work with the free version, that `gfzrnx` tends to be rather heavy on system resources (compared to `teqc` and `rnxedit`), and there is no source code available for `gfzrnx` and `teqc`. 
-
-To me, `rnxedit` is intended as replacement for `teqc` and `gfzrnx`, not for everything, but only the most common operations (98% of the work). For all three tools, `teqc`, `gfzrnx` and `rnxedit`, there are jobs for which it is the "right" tool. 
+To me, `rnxedit` is not intended as a full replacement for `teqc` or `gfzrnx`, it only excels at the most common operations (95% of the work). All three software tools have their own specific use cases. 
 
 ## RINEX observation statistics - `rnxstats`
 
-RINEX observation statistics with number of epochs, satellites and observations.
+RINEX observation statistics with number of epochs, satellites and observations. *Not yet available, expected early July 2025*
 
 ## Perl function libraries
 
