@@ -149,19 +149,19 @@ if ( scalar @ARGV ) {
        analyzernx($inputfile,$versoutopt);
     } else {
        # set temporary output filename
-       my $tmpoutputfile = "$inputfile.tmp.$$";
-       my $outputfile = $inputfile;
+       my $outputfile = fileparse($inputfile);
+       my $tmpoutputfile = "$outputfile.tmp.$$";
        if ( exists($Config{outputdir}) ) {
           # check if $Config{outputdir} is directory and exists
           if ( -d $Config{outputdir} ) {
              # include $Config{outputdir} in output file name
              $tmpoutputfile = $Config{outputdir}."/".$tmpoutputfile;
-             $outputfile = $Config{outputdir}."/".$inputfile;
+             $outputfile = $Config{outputdir}."/".$outputfile;
           } else {
              die "Output directory $Config{outputdir} does not exist, abort...\n";
           }
        }
-       print STDOUT "Editing $inputfile ->  $outputfile";
+       print STDOUT "Edit $inputfile -> $outputfile";
        convertrnx($inputfile,$tmpoutputfile,$versoutopt) || warn "Error in convertrnx.";
 #      On success, rename output and input file
        if ( -e $outputfile ) {
