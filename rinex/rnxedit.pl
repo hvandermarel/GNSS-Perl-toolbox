@@ -74,7 +74,7 @@ use strict;
 require "librnxio.pl";
 require "librnxsys.pl";
 
-$VERSION = 20250625;
+$VERSION = 20250629;
 
 my $fherr=*STDERR;
 
