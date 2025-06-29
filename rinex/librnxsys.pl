@@ -4,8 +4,8 @@
 # 
 #------------------------------------------------------------------------------
 #
-#   List of functions:
-#   ------------------
+#   RINEX observation type printing and formatting functions:
+#   ---------------------------------------------------------
 #
 #   Print RINEX2/3 observation types 
 #      prtobstype2($fh,$obsid2);
@@ -17,21 +17,45 @@
 #      @header=fmtobshead2($obsid2);
 #      @header=fmtobshead3($obsid3);
 #
-#   Convert RINEX2/3 observation types into a hash with RINEX3/2 obervation types
+#   RINEX observation type translation functions:
+#   ---------------------------------------------
+#
+#   Translate RINEX observation types into RINEX3 obervation types and vice versa
 #      ($obsid3,$obs2idx)=obstype2to3($mixedfile,$obsid2,$cnvtable2to3 );
 #      ($obsid2,$obs2idx)=obstype3to2($mixedfile,$obsid3,$cnvtable2to3 );
 #
-#   Print formatted RINEX2/3 observation type to RINEX3/2 conversion table
+#   Print formatted RINEX2/3 observation type to RINEX3/2 translation table
 #      @lines=fmtcnvtable($obsid2,$obsid3,$obs2idx,$versin,$versout);
 #
-#   Compute the inverse RINEX2 to 3 observation index.
+#   Compute the RINEX2 to 3 observation index.
 #      ($obs3idx)=invobsidx($obs2idx);
+#
+#   RINEX Observation type sorting and removal functions:
+#   -----------------------------------------------------
+#
+#   Sort observation types
+#      ($obsid3,$obsidx)=rnxobstype3sort($obsid3, $obsidx, $select);
+#      ($obsid2,$indices)=rnxobstype2sort($obsid2, $indices, $select);
+#
+#   Remove observation types
+#      ($obsid3,$obsidx)=rnxobstype3rm($obsid3, $obsidx, $rmspec);
+#      ($obsid2,$obsidx)=rnxobstype2rm($obsid2, $obsidx, $rmspec);
+#
+#   Indexing and data reordering functions:
+#   ---------------------------------------
+#
+#   Initialize the observation index.using RINEX2/3 observation types
+#      $obsidx = iniobsidx2($obsid2,$satsys);
+#      $obsidx = iniobsidx3($obsid3);
 #
 #   Print the observation index.
 #      prtobsidx($fh,$obsidx);
 #
 #   Reorder observation fields in RINEX data array
 #      $data=ReorderRnxData($nsat,$data,$obsidx);
+#
+#   RINEX observation type definition functions:
+#   --------------------------------------------
 #
 #   Define all possible RINEX 2 and 3 observations based on a list of available signals
 #      ($cnvtable2to3,$cnvtable3to2)=obstypedef($signaltypes);
@@ -48,6 +72,9 @@
 #
 #   Return an array with logically sorted system ids present in the input hash
 #      @sysids=sysids($signaltypes)
+# 
+#   Glonass meta data functions:
+#   ----------------------------
 #
 #   Return GLONASS slot number, SVN and sensor name
 #      $glosat = glonassdata($date,$cfgfile);
@@ -112,10 +139,24 @@
 #      in RINEX 2 column $i2 for system $sysid (Column count starts with 0). If
 #      $i3 is -99 there is not a corresponding RINEX3 observation.
 #
+#   %{$obsidx}       - hash with indices to column numbers in the input RINEX data 
+#                      file,  
 #
-#   @{$data}         - =ReorderRnxData($nsat,$data,$obsidx);
-#   $nsat
-#   %{$obsidx}       - either %{$obs2idx} or %{$obs3idx} 
+#      The position $iold in the original rinex file is given by
+#
+#         $iold=@{$obsidx->{$sysid}}[$inew]  for $inew=0 .. $#{$obsidx->{$sys}}  
+#
+#      with $inew the new position in the RINEX file. If $iold equal -99, then
+#      the original observation should be removed by inserting blanks.
+#
+#      Two special cases of $obsidx are either %{$obs2idx} or %{$obs3idx}. 
+#
+#   %{$colidx}       - Alternative name for $obsidx.
+#   @{colidx2}       - Array with indices for @{$obsid2}, same role and function
+#                      as %{$colidx}, but specific for rinex 2 observation types
+#                      that does not differentiate between systems 
+#
+#   @{$data}         - Array holding the actual RINEX data for a single epoch
 #
 #   $mixedfile       - 1-char string with the RINEX filetype ("M" for mixed)
 #   $receivertype    - receiver type or class (signaldef input)
@@ -160,6 +201,10 @@
 #           25 June 2025 by Hans van der Marel
 #              - use tell and seek to rewind DATA to original position so that
 #                reading this section multiple times work
+#           29 June 2025 by Hans van der Marel
+#               - added rnxobstype3sort, rnxobstype2sort, rnxobstype3rm,
+#                 rnxobstype2rm, iniobsidx2 and iniobsidx3 functions
+#               - updated documentation
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -178,6 +223,11 @@
 use strict;
 use warnings;
 
+
+###########################################################################
+# RINEX observation type printing and formatting functions
+###########################################################################
+
 sub prtobstype2{
 
   # Print RINEX2 observation types 
@@ -190,10 +240,7 @@ sub prtobstype2{
   #
   # (c) Hans van der Marel, Delft University of Technology.
 
-
   my ($fh,$obsid2) = @_;
-
-  print $fh ("\nRINEX 2 observation types (input):\n\n"); 
 
   my $nobs2=scalar(@{$obsid2});
 
@@ -225,8 +272,6 @@ sub prtobstype3{
   # (c) Hans van der Marel, Delft University of Technology.
 
   my ($fh,$obsid3)=@_;
-
-  print $fh ("\nRINEX 3 observation types (output):\n\n"); 
 
   #foreach my $sysid (keys(%{$obsid3})) {
   foreach my $sysid (sysids($obsid3)) {
@@ -375,6 +420,10 @@ sub fmtobshead3{
 
    return @header;
 }
+
+###########################################################################
+# RINEX observation type translation functions 
+###########################################################################
 
 sub obstype2to3{
 
@@ -620,8 +669,6 @@ sub fmtcnvtable{
       $line .= sprintf("-> %-2.2s(%2.0f)",@{$obsid2}[$i],$i+1);
       push @lines, $line;
     }
-
-    push @lines, "RINEX OBSERVATION TRANSLATION: UNUSED RINEX3 TYPES";
     
     my $missing={};
     my $kk=0;
@@ -639,19 +686,22 @@ sub fmtcnvtable{
       $kk=$k if $k > $kk; 
     }  
 
-    push @lines, $headerline;
-    for (my $i=0; $i < $kk; $i++) {
-      my $line="";
-      foreach my $sysid (sysids($missing)) {
-        if ( $i < scalar(@{$missing->{$sysid}}) ) {
-          my $j=@{$missing->{$sysid}}[$i];
-          $line=$line.sprintf("%-3.3s(%2.0f) ",@{$obsid3->{$sysid}}[$j],$j+1);
-        } else {
-          $line=$line."        ";
+    if ( $kk > 0 ) {
+      push @lines, "RINEX OBSERVATION TRANSLATION: UNUSED RINEX3 TYPES";
+      push @lines, $headerline;
+      for (my $i=0; $i < $kk; $i++) {
+        my $line="";
+        foreach my $sysid (sysids($missing)) {
+          if ( $i < scalar(@{$missing->{$sysid}}) ) {
+            my $j=@{$missing->{$sysid}}[$i];
+            $line=$line.sprintf("%-3.3s(%2.0f) ",@{$obsid3->{$sysid}}[$j],$j+1);
+          } else {
+            $line=$line."        ";
+          }
         }
+        push @lines, $line;
       }
-      push @lines, $line;
-    }
+    } 
 
   }
 
@@ -708,6 +758,471 @@ sub invobsidx{
 
 }
 
+###########################################################################
+# RINEX observation type sorting and removal functions
+###########################################################################
+
+sub rnxobstype3sort{
+
+  # Sort RINEX3 obervation types and return hash with indices
+  # Usuage
+  #
+  #   my ($obsid3,$colidx)=rnxobstype3sort($obsid3, {}, $select);
+  #   my ($obsid3,$colidx)=rnxobstype3sort($obsid3, $colidx, $select);
+  #
+  # with $obsid3 (\%obsid3) the hash reference with RINEX3 observation ids
+  # and $colidx the reference to a hash with corresponding column indices.
+  # The sort order is specified by $select, possible values are
+  #
+  #    fr[eq]  -  C1C L1C S1C C2W L2W ...             (keep .1C, .2W, etc. together)
+  #    ty[pe]  -  C1C C1W ... L1C L2W ... S1C S2W ... (keep types together)
+  #    se[pt]  -  preferred order for septentrio receivers, same as "freq", except
+  #               for Beidou which uses a different frequency order (15276)
+  #    as[is]  -  keep as is (no sorting)
+  #
+  # Two letters are enough (the other characters are ignored).
+  #
+  # The observation type order is 'CLDSX', the frequency order is ascending,
+  # and attribute order is such that the more important or used observations
+  # come first.
+  #
+  # When $colidx is an empty hash reference {} on input the observation
+  # types are assumed to be still in their original order (i.e. alligned
+  # with the data in the file). The indices in $colidx are always pointing
+  # to the column in the rinex file that holds the data.
+  # 
+  # The output and input  hashes should be referenced as 
+  #  
+  #    @obsid3list=@{$obsid3->{$sysid}}
+  #    @obsid3idx=@{$colidx->{$sysid}}
+  #
+  # with $sysid the 1-character systemid and @obsid3list the array with 
+  # RINEX3 observation types for that system and @obsids3idx an array with
+  # the position in the RINEX observation file, i.e.
+  #
+  #    $tfa=@{$obsid3->{$sysid}}[$inew]
+  #    $iold=@{$colidx->{$sysid}}[$inew]
+  #
+  # which gives RINEX 3 column number $iold and observation type $tfa at position $inew
+  # for the sorted observation types.
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+  
+  my ($obsid3,$colidx,$select)=@_;
+  
+  # define prefered order 
+
+  my $freqs='123456789';
+  my $types='CLDSX';
+  my $attrs='PWCXLSZQIBADEYMRN';
+  
+  # create an array with the predefined sort order for a superset of all possible observation types 
+
+  my @order = ();
+  if ( $select =~ /^(fr|se).*/ ) {
+     foreach my $freq ( split(//,$freqs) ) {
+        foreach my $attr ( split(//,$attrs) ) {
+           foreach my $type ( split(//,$types) ) {
+              push @order, "$type$freq$attr";
+           }
+        }
+     }
+  } elsif ( $select =~ /^ty.*/ ) {
+     foreach my $type ( split(//,$types) ) {
+        foreach my $freq ( split(//,$freqs) ) {
+           foreach my $attr ( split(//,$attrs) ) {
+              push @order, "$type$freq$attr";
+           }
+        }
+     }
+  } elsif ( $select =~ /^as.*/ ) {
+     my %colidxout=();
+     foreach my $sysid (keys(%{$obsid3})) {
+        if ( exists( $colidx->{$sysid} ) ) {
+           $colidxout{$sysid} = $colidx->{$sysid};
+        } else {
+           my @tmp=@{$obsid3->{$sysid}};
+           $colidxout{$sysid} = [ 0 .. $#tmp ] ;
+        }
+     }
+     return $obsid3,\%colidxout;
+  } else {
+     die "Error rnxobstype3sort: unknown sort option $select\n";
+  }
+
+  my %order_beidou;
+  if ( $select =~ /^(se).*/ ) {
+     my $freqs_beidou='152763489';
+     my @order = ();
+     foreach my $freq_beidou ( split(//,$freqs_beidou) ) {
+        foreach my $attr ( split(//,$attrs) ) {
+           foreach my $type ( split(//,$types) ) {
+              push @order, "$type$freq_beidou$attr";
+           }
+        }
+     }
+     %order_beidou = map { $order[$_] => $_ } 0..$#order;
+  }
+
+  # convert the array with predefined sort order into a hash with as key the 
+  # observation type and as value the position in the predefined sort order, 
+  # the hash will be used to sort the actual observation types
+  
+  my %order = map { $order[$_] => $_ } 0..$#order;
+
+  # sort rinex 3 observation types for each system
+  
+  my %obsid3out=();
+  my %colidxout=();
+  foreach my $sysid (keys(%{$obsid3})) {
+     my @obsid3list=@{$obsid3->{$sysid}};
+     #my @sorted = sort { $order{$a} <=> $order{$b} } @obsid3list;
+     my @indices = sort { $order{$obsid3list[$a]} <=> $order{$obsid3list[$b]} } 0 .. $#obsid3list;
+     if ( $sysid =~ /^C$/ && $select =~ /^(se).*/ ) {
+        @indices = sort { $order_beidou{$obsid3list[$a]} <=> $order_beidou{$obsid3list[$b]} } 0 .. $#obsid3list;
+     }
+     my @sorted = @obsid3list[@indices]; 
+     $obsid3out{$sysid} = [ @sorted ] ;
+     if ( exists( $colidx->{$sysid} ) ) {
+        $colidxout{$sysid} = [ @{$colidx->{$sysid}}[ @indices ] ];
+     } else {
+        $colidxout{$sysid} = [ @indices ] ;
+     }
+  }
+
+  return \%obsid3out,\%colidxout;
+
+}
+
+sub rnxobstype2sort{
+
+  # Sort RINEX2 obervation types and return array with indices
+  # Usuage
+  #
+  #   my ($obsid2,$indices)=rnxobstype2sort($obsid2, [], $select);
+  #   my ($obsid2,$indices)=rnxobstype2sort($obsid2, $indices, $select);
+  #
+  # with $obsid2 (\@obsid2) an array reference with RINEX2 observation ids
+  # and $indices an array reference with corresponding column indices.
+  # The sort order is specified by $select, possible values are
+  #
+  #    fr[eq] -  C1 L1 L2 P2 C2 S1 S2 C5 L5 S5 C7 L7 S7 ...
+  #    ty[pe] -  C1 L1 L2 P2 C2 C5 C7 ... L5 L7 ... S1 S2 S5 S7 ...
+  #    se[pt] -  C1 L1 L2 P2 C2 C5 L5 C7 L7 ... S1 S2 S5 S7 ...
+  #    as[is] -  keep as is (no sorting)
+  #
+  # Two letters are enough (the other characters are ignored).
+  #
+  # All sorting options are the same for the first five observation types
+  # "C1 L1 L2 P2 C2", which is a sort of convention for RINEX2 because
+  # of the particularities involved with the P codes. Otherwise, the 
+  # observation type order is 'PCLDS'.  The option "se[pt]" is a mix of
+  # "freq" and "type"; basically it is the same as "freq", but puts all 
+  # signal strength types at the end like in "type".
+  #
+  # When $indices is an empty array reference [] on input the observation
+  # types are assumed to be still in their original order (i.e. alligned
+  # with the data in the file). The indices in $indices are always pointing
+  # to the column in the rinex file that holds the data.
+  # 
+  # The output and input arrays should be referenced as 
+  #  
+  #    $tf=@{$obsid2}[$inew]
+  #    $iold=@{$indices}}[$inew]
+  #
+  # which gives RINEX data column number $iold and observation type $tf at position $inew
+  # for the sorted observation types.
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+
+  my ($obsid2,$colidx,$select)=@_;
+  
+  # define prefered order 
+
+  my $freqs='123456789';
+  my $types='PCLDS';
+  
+  # create an array with the predefined sort order for a superset of all possible observation types 
+
+  my @order = ( 'C1', 'L1', 'L2', 'P2', 'C2' );
+  if ( $select =~ /^fr.*/ ) {
+     foreach my $freq ( split(//,$freqs) ) {
+        foreach my $type ( split(//,$types) ) {
+           push @order, "$type$freq" if ( "$type$freq "!~ /[CLP][12]/ );
+        }
+     }
+  } elsif ( $select =~ /^ty.*/ ) {
+     foreach my $type ( split(//,$types) ) {
+        foreach my $freq ( split(//,$freqs) ) {
+           push @order, "$type$freq" if ( "$type$freq" !~ /[CLP][12]/ );
+        }
+     }
+  } elsif ( $select =~ /^se.*/ ) {
+     foreach my $freq ( split(//,$freqs) ) {
+        foreach my $type ( split(//,'CLD') ) {
+           push @order, "$type$freq" if ( "$type$freq "!~ /[CLP][12]/ );
+        }
+     }
+     foreach my $freq ( split(//,$freqs) ) {
+        push @order, "S$freq";
+     }
+  } elsif ( $select =~ /^as.*/ ) {
+     my @colidxout=();
+     if ( scalar(@$colidx) == scalar(@$obsid2) ) { 
+        @colidxout = @$colidx;
+     } else {
+        my @tmp = @$obsid2;
+        @colidxout = 0 .. $#tmp  ;
+     }
+     return $obsid2,\@colidxout;
+  } else {
+     $select=undef;
+     die "unknown option\n";
+  }
+
+  # convert the array with predefined sort order into a hash with as key the 
+  # observation type and as value the position in the predefined sort order, 
+  # the hash will be used to sort the actual observation types
+  
+  my %order = map { $order[$_] => $_ } 0..$#order;
+
+  # sort rinex 2 observation types
+  
+  #my @sorted = sort { $order{$a} <=> $order{$b} } @$obsid2;
+  my @obsid2list = @$obsid2;
+  my @indices = sort { $order{$obsid2list[$a]} <=> $order{$obsid2list[$b]} } 0 .. $#obsid2list;
+  my @obsid2out = @obsid2list[@indices]; 
+  my @colidxout=();
+  if ( scalar(@$colidx) == scalar(@$obsid2) ) { 
+     @colidxout = @$colidx[ @indices ];
+  } else {
+     @colidxout = @indices ; ;
+  }
+
+  return \@obsid2out,\@colidxout;
+
+}
+
+sub rnxobstype3rm{
+
+  # Remove RINEX3 obervation types
+  # Usuage
+  #
+  #   my ($obsid3,$colidx)=rnxobstype3rm($obsid3, $colidx, $rmspec);
+  #
+  # with $obsid3 (\%obsid3) the hash reference with RINEX3 observation ids
+  # and $colidx the reference to a hash with corresponding column indices.
+  # 
+  # The string $rmspec specifies the observation types to remove. This is
+  # a comma separated list with a regular expession or key value pair 
+  # separated by a colon with as key the system and an regex as value:
+  #
+  #    regex
+  #    sys:regex
+  #    sys:regex,regex,...
+  #    sys:regex,sys:regex,...
+  #
+  # without system identifier sys: (G:, R:, E:, S:, C:, J: or I:) the regex
+  # is applied to all systems (giving no sys: is equivalent to X:). For example
+  #
+  #     "G:2L,E:7,D.."
+  #
+  # removes all GPS "2L' observations (C2L, L2L, D2L, S2L), all Galileo
+  # obsevations on frequency 7, and all Doppler observations.
+  #  
+  # The output and input  hashes should be referenced as 
+  #  
+  #    @obsid3list=@{$obsid3->{$sysid}}
+  #    @obsid3idx=@{$colidx->{$sysid}}
+  #
+  # with $sysid the 1-character systemid and @obsid3list the array with 
+  # RINEX3 observation types for that system and @obsids3idx an array with
+  # the position in the RINEX observation file, i.e.
+  #
+  #    $tfa=@{$obsid3->{$sysid}}[$inew]
+  #    $iold=@{$colidx->{$sysid}}[$inew]
+  #
+  # which gives RINEX 3 column number $iold and observation type $tfa at position $inew
+  # for the sorted observation types.
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+  
+   my ($obsid3, $colidx, $rmspec) = @_;
+
+   my $obsid3out = { %$obsid3 };
+   my $colidx3out = { %$colidx };
+   my $rmtypes = {};
+
+   # parse the remove specification string
+   
+   my %removes;
+   foreach my $tmp ( split(/,/, $rmspec) ) {
+      if ( $tmp =~ /[:]/ ) {
+        my ($key,$value) = split(/[,:]/, $tmp);
+        $removes{$key} = $value;
+      } else {
+        $removes{X} = $tmp;
+      }
+   }
+   
+   # remove the selected observation types
+   
+   foreach my $sys ( keys %$obsid3 ) {
+      if ( exists($removes{$sys}) ) {
+           #print "Removing observation types: $sys => "; foreach my $tmp ( grep {/$removes{$sys}/} @{$obsid3->{$sys}} ) { print $tmp ." "; }; print "\n";
+           $rmtypes->{$sys} = [ grep {/$removes{$sys}/} @{$obsid3->{$sys}} ];
+           my @indices = grep { $obsid3->{$sys}->[$_] !~ /$removes{$sys}/ } 0..$#{$obsid3->{$sys}}; 
+           $obsid3out->{$sys} = [ @{$obsid3->{$sys}}[ @indices ] ]; 
+           $colidx3out->{$sys} = [ @{$colidx->{$sys}}[ @indices ] ]; 
+      }
+      if ( exists($removes{'X'}) ) {
+           #print "Removing observation types: X => "; foreach my $tmp ( grep {/$removes{'X'}/} @{$obsid3out->{$sys}} ) { print $tmp ." "; }; print "\n";
+           push @{$rmtypes->{$sys}} , grep {/$removes{'X'}/} @{$obsid3out->{$sys}};
+           my @indices = grep { $obsid3out->{$sys}->[$_] !~ /$removes{'X'}/ } 0..$#{$obsid3out->{$sys}}; 
+           $obsid3out->{$sys} = [ @{$obsid3out->{$sys}}[ @indices ] ]; 
+           $colidx3out->{$sys} = [ @{$colidx3out->{$sys}}[ @indices ] ]; 
+      }
+   }
+
+   return $obsid3out, $colidx3out, $rmtypes;
+}
+
+sub rnxobstype2rm{
+
+  # Remove RINEX2 obervation types
+  # Usuage
+  #
+  #   my ($obsid2,$colidx)=rnxobstype2rm($obsid2, $colidx, $rmspec);
+  #
+  # with $obsid2 (\@obsid2) the array reference with RINEX2 observation ids
+  # and $colidx the reference to a hash with corresponding column indices.
+  # for each system.
+  # 
+  # The string $rmspec specifies the observation types to remove. This is
+  # a comma separated list with a regular expession or key value pair 
+  # separated by a colon with as key the system and an regex as value:
+  #
+  #    regex
+  #    sys:regex
+  #    sys:regex,regex,...
+  #    sys:regex,sys:regex,...
+  #
+  # without system identifier sys: (G:, R:, E:, S:, C:, J: or I:) the regex
+  # is applied to all systems (giving no sys: is equivalent to X:). For example
+  #
+  #     "G:2L,E:7,D.."
+  #
+  # removes all GPS "2L' observations (C2L, L2L, D2L, S2L), all Galileo
+  # obsevations on frequency 7, and all Doppler observations.
+  #  
+  # The output and input colidx hashes should be referenced as 
+  #  
+  #    @obsid2idx=@{$colidx->{$sysid}}
+  #
+  # with $sysid the 1-character systemid and @obsids2idx an array with the position in the 
+  # RINEX observation file or -99 to indicate a missing observation (blank) in
+  # each system.
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+  
+   my ($obsid2, $colidx, $rmspec) = @_;
+
+   my $obsid2out = [ @$obsid2 ];
+   my $colidx2out = { %$colidx };
+   my $rmtypes = {};
+
+   # parse the remove specification string
+   
+   my %removes;
+   foreach my $tmp ( split(/,/, $rmspec) ) {
+      if ( $tmp =~ /[:]/ ) {
+        my ($key,$value) = split(/[,:]/, $tmp);
+        $removes{$key} = $value;
+      } else {
+        $removes{X} = $tmp;
+      }
+   }
+
+   # remove the selected rinex 2 observation types by setting the pointer to -99
+   
+   foreach my $sys ( keys %$colidx) {
+      if ( exists($removes{$sys}) ) {
+           #print "Removing observation types: $sys => "; foreach my $tmp ( grep {/$removes{$sys}/} @$obsid2 ) { print $tmp ." "; }; print "\n";
+           $rmtypes->{$sys} = [ grep {/$removes{$sys}/} @$obsid2 ];
+           my @indices = grep { $obsid2->[$_] =~ /$removes{$sys}/ } 0..$#{$obsid2}; 
+           foreach my $i ( @indices ) { $colidx2out->{$sys}[$i] = -99}; 
+      }
+   }
+
+   # remove the selected rinex 2 observation types whole (all systems)
+
+   if ( exists($removes{'X'}) ) {
+
+     #print "\n\nRemoving observation types: "; foreach my $tmp ( grep {/$removes{'X'}/} @$obsid2 ) { print $tmp ." "; }; print "\n\n";
+     my @indices = grep { $obsid2->[$_] !~ /$removes{'X'}/ } 0..$#{$obsid2}; 
+     #print "[ "; foreach my $tmp ( @indices) { print $tmp ." "; }; print "]\n";
+     $obsid2out = [ @$obsid2[ @indices ] ]; 
+     foreach my $sys ( keys %$colidx2out) {
+        push @{$rmtypes->{$sys}} , grep {/$removes{'X'}/} @{$obsid2};
+        $colidx2out->{$sys} = [ @{$colidx2out->{$sys}}[ @indices ] ]; 
+     }     
+   }
+
+   return $obsid2out, $colidx2out, $rmtypes;
+}
+
+###########################################################################
+# Indexing and data reordering functions
+###########################################################################
+
+sub iniobsidx2 {
+
+  # Initialize the observation index.using RINEX2 observation types
+  # Usuage
+  #
+  #    $colidx = iniobsidx2($obsid2,$satsys);
+  #
+  # returns the reference to a hash of arrays $colidx with as key the
+  # satellite system and as value an array with the column numbers 
+  # corresponding to the observation type in the array $obsid2.
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+   my ($obsid2,$satsys) = @_;
+  
+   my $colidx={};
+   foreach my $sys ( @$satsys) {
+      $colidx->{$sys} = [ 0 .. $#{$obsid2} ];
+      #print "$sys => [ "; foreach my $tmp ( @{$colidx->{$sys}} ) { print $tmp ." "; }; print "]\n";
+   }
+
+   return $colidx;
+}
+
+sub iniobsidx3 {
+
+  # Initialize the observation index.using RINEX3 observation types
+  # Usuage
+  #
+  #    $colidx = iniobsidx3($obsid3);
+  #
+  # returns the reference to a hash of arrays $colidx with the column numbers 
+  # in the RINEX dataset for the corresponding observation type in $obsid3.
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+   my ($obsid3) = @_;
+  
+   my $colidx={};
+   foreach my $sys ( keys %$obsid3 ) {
+      $colidx->{$sys} = [ 0 .. $#{$obsid3->{$sys}} ];
+      #print "$sys => [ "; foreach my $tmp ( @{$colidx->{$sys}} ) { print $tmp ." "; }; print "]\n";
+   }
+
+   return $colidx;
+}
+
 sub prtobsidx{
 
   # Print the observation index.
@@ -729,8 +1244,8 @@ sub prtobsidx{
   # (c) Hans van der Marel, Delft University of Technology.
   
   my ($fh,$colidx)=@_;
-  
-  for my $sysid ( keys(%{$colidx}) ) {
+  #for my $sysid ( keys(%{$colidx}) ) {
+  for my $sysid ( sysids($colidx) ) {
      print $fh ($sysid, ": ");
      for my $id (@{$colidx->{$sysid}})  {
         print $fh (" ".$id);
@@ -796,6 +1311,10 @@ sub ReorderRnxData{
   return $dataout;
   
 }
+
+###########################################################################
+# RINEX observation type definition functions
+###########################################################################
 
 sub obstypedef{
 
@@ -868,7 +1387,8 @@ sub prttypedef{
 
    my ($fh,$typedef)=@_;
 
-   for my $sysid ( keys(%{$typedef}) ) {
+   #for my $sysid ( keys(%{$typedef}) ) {
+   for my $sysid ( sysids($typedef) ) {
       print $fh ($sysid, ": ");
       for my $id ( keys(%{$typedef->{$sysid}}) ) {
         print $fh ("$id->", $typedef->{$sysid}->{$id}, "; ");
@@ -964,7 +1484,8 @@ sub prtsignaldef{
 
   my ($fh,$signaltypes)=@_;
     
-  for my $sysid ( keys(%{$signaltypes}) ) {
+  #for my $sysid ( keys(%{$signaltypes}) ) {
+  for my $sysid ( sysids($signaltypes) ) {
      print $fh "$sysid: ", $signaltypes->{$sysid}, "\n";
   }
 
@@ -995,6 +1516,10 @@ sub sysids{
   return @sysids;
 
 }
+
+###########################################################################
+# Glonass meta data functions
+###########################################################################
 
 sub glonassdata{
 
@@ -1091,6 +1616,7 @@ sub glonassslothdr{
 }
 
 1;
+
 __DATA__
 # Definition of signal types (RINEX 3 style) for various GNSS receivers.
 # The order is important in case of multiple signals per frequency:

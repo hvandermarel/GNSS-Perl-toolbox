@@ -807,7 +807,9 @@ sub CnvRnxHdr{
      @cnvtable=fmtcnvtable($obsid2,$obsid3,$colidx,$versin,$versout);
      if ( $verbose > 0 ) {
        print $fherr ("\nConversion from RINEX version 2 ($versin) to 3 ($versout)\n"); 
+       print $fherr ("\nRINEX 2 observation types:\n\n"); 
        prtobstype2($fherr,$obsid2);
+       print $fherr ("\nRINEX 3 observation types:\n\n"); 
        prtobstype3($fherr,$obsid3);
        for my $line (@cnvtable) {
          print $fherr $line."\n";
@@ -835,7 +837,9 @@ sub CnvRnxHdr{
      @cnvtable=fmtcnvtable($obsid2,$obsid3,$colidx2,$versin,$versout);
      if ( $verbose > 0 ) {
        print $fherr ("\nConversion from RINEX version 3 ($versin) to 2 ($versout)\n"); 
+       print $fherr ("\nRINEX 2 observation types:\n\n"); 
        prtobstype2($fherr,$obsid2);
+       print $fherr ("\nRINEX 3 observation types:\n\n"); 
        prtobstype3($fherr,$obsid3);
        for my $line (@cnvtable) {
          print $fherr $line."\n";
@@ -849,7 +853,7 @@ sub CnvRnxHdr{
        prtobsidx($fherr,$colidx);
      }
 #  } else {
-#	 $colidx=XXXXXXX
+#    $colidx=XXXXXXX
   }
 
   # Modify and copy the header lines
