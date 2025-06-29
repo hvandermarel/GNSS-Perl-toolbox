@@ -12,6 +12,9 @@
 #              - observation types from command line and stdin
 #              - added help and improved output
 #              - added Apache version 2 license
+#           29 June 2025 by Hans van der Marel
+#               - few minor corrections
+#               - released to github
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
