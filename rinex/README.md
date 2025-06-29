@@ -11,7 +11,7 @@ RINEX observation file editing, filtering and conversion for RINEX version 2, 3 
 By typing `rnxedit -h` in a terminal (or on some systems `./rnxedit.pl -h`) a brief instruction is provided: 
 
 ```
-rnxedit                                            (Version: 20250625)
+rnxedit                                            (Version: 20250629)
 -------
 Edit, filter and convert RINEX observation files.
 Syntax:
@@ -47,6 +47,12 @@ Filtering options:
     -e endtime.........Observation end time [yyyy-mm-dd[ T]]hh:mm[:ss]
     -i interval........Observation interval [sec]
     -s satsys..........Satellite systems to include [GRECJS]
+    -by sort[[,sort]]  Order for the observation types, with
+                         fr[eq]  -  keep .signals (1C, .2W, etc.) together
+                         ty[pe]  -  keep types (C, L, S) together
+                         se[pt]  -  preferred order for Septentrio receivers
+                         as[is]  -  keep as is (no sorting)
+    -rm spec[[,spec]]  Remove observation types (spec = [sys:]regex )
 
 Rinex version 2/3+ conversion options:
 
@@ -68,6 +74,28 @@ General options:
                        on the commandline will be overwritten (the originals
                        will be saved with an extra extention .orig)
     -v                 Verbose (increase verbosity level)
+
+For RINEX version 3 the result of the sort options is
+
+    -by freq|sept  ->  C1C L1C S1C C2W L2W ...             (keep .1C, .2W, etc. together)
+    -by type       ->  C1C C1W ... L1C L2W ... S1C S2W ... (keep types together)
+
+For RINEX version 2 the result of the sort options is always the same for the
+first five observations "C1 L1 L2 P2 C2", but differs thereafter
+
+    -by freq  ->  C1 L1 L2 P2 C2 S1 S2 C5 L5 S5 C7 L7 S7 ...
+    -by type  ->  C1 L1 L2 P2 C2 C5 C7 ... L5 L7 ... S1 S2 S5 S7 ...
+    -by sept  ->  C1 L1 L2 P2 C2 C5 L5 C7 L7 ... S1 S2 S5 S7 ...
+
+The option "sept" is a mix of "freq" and "type"; basically it is the same as "freq", but
+puts all signal strength types at the end like in "type".
+
+The option "-rm spec[[,spec]]" specifies the observation types to remove. This is
+a comma separated list with "spec" a Perl regular expession "regex" operating on all
+systems or a key value pair "sys:regex" with a Perl regular expression operating on a
+designated system sys (G, R, E, C, S, J, I). For example "G:2L,E:7,D.." removes all
+GPS "2L' observations (C2L, L2L, D2L, S2L), all Galileo observations on frequency 7,
+and all Doppler observations.
 
 Examples:
 
@@ -101,6 +129,18 @@ The file `glonass.cfg` is required for conversion from RINEX version 2.11 to ver
 If you don't like to have all these files in your search path, put the files in a separate directory and create a symbolic link to only `rnxedit.pl` from a directory in the search path.
 
 Other dependecies of `rnxedit` are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are very common and included by most Perl distributions.
+
+### Testing and checking of observation type translation, sorting and removal - `rnxobstype` and `rnxobssort`
+
+The Perl scripts `rnxobstype` and `rnxobsort` can be used to test, check and play with the translation,
+sorting and removal of RINEX version 2 and 3 observation types. These functions do not change the RINEX files.
+They can be used to experiment and play with the various options, and for checking if these give the desired
+result. Their functionality is similar to, but more extensive than, the analyze function `rnxedit -n` in `rnxedit`.
+For brief instructions type 
+```
+rnxobstype -h
+rnxobssort -h
+```
 
 ### RINEX compability
 
