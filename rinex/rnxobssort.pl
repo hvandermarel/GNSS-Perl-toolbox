@@ -2,13 +2,15 @@
 #
 # rnxobssort
 # ----------
-# This script sorts rinex version 2 and 3 observations types..
+# This script sorts and/or removes rinex version 2 and 3 observations types..
 #
 # For help:
 #     rnxobssort -?
 #
 # Created:  27 June 2025 by Hans van der Marel
-# Modified: 
+# Modified: 29 June 2025 by Hans van der Marel
+#              - added remove functionality
+#              - released to github
 #
 # Copyright 2025 Hans van der Marel, Delft University of Technology.
 #
