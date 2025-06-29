@@ -136,13 +136,109 @@ The Perl scripts `rnxobstype` and `rnxobsort` can be used to test, check and pla
 sorting and removal of RINEX version 2 and 3 observation types. These functions do not change the RINEX files.
 They can be used to experiment and play with the various options, and for checking if these give the desired
 result. Their functionality is similar to, but more extensive than, the analyze function `rnxedit -n` in `rnxedit`.
-For brief instructions type 
+
+For brief instructions on **rnxobstype** type `rnxobstype -h`:  
+
 ```
-rnxobstype -h
-rnxobssort -h
+rnxobstype                                            (Version: 20250625)
+----------
+Translate RINEX version 2 to version 3 observation types and vice versa.
+Syntax:
+
+    rnxobstype -?
+    rnxobstype [-options] RINEX2_OBSTYPE [[ RINEX2_OBSTYPE ]]
+    rnxobstype [-options] < file_with_obstypes
+    cat file_with_obstypes | rnxobstype [-options]
+
+If no RINEX version 2 observation types are given on the command line, the script reads
+from the standard input and translates any RINEX version 2 or 3 observation TYPES records
+it finds. Options are:
+
+    -?|h|help..........This help
+    -r #[.##]..........RINEX output version, default is to output the same
+                       version as the input file
+    -x receiverclass...Receiver class (overrides receiver type) for conversion:
+                          GPS12    Only include GPS L1 and L2 observations
+                          GPS125   Only include GPS L1, L2 and L5 observations
+                          GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+    -v                 Verbose (increase verbosity level)
+
+Examples:
+
+    rnxobstype C1 L1 L2 P2 S1 S2
+    rnxobstype -v C1 L1 L2 P2 S1 S2
+    rnxobstype -x GRES125 C1 L1 L2 P2 S1 S2
+
+    grep TYPES data/MX5C1340.25O | rnxobstype -v -x GRES125
+
+    grep TYPES data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxobstype -x GRES125
+
+(c) 2011-2025 by Hans van der Marel, Delft University of Technology.
+
+```
+For brief instructions on **rnxobssort** type `rnxobssort -h`:  
+
+```
+rnxobssort                                            (Version: 20250627)
+----------
+Sort RINEX version 2 to version 3 observation types.
+Syntax:
+
+    rnxobssort -?
+    rnxobssort [-options] RINEX2_OBSTYPE [[ RINEX2_OBSTYPE ]]
+    rnxobssort [-options] < file_with_obstypes
+    cat file_with_obstypes | rnxobssort [-options]
+
+If no RINEX version 2 observation types are given on the command line, the script reads
+from the standard input and translates any RINEX version 2 or 3 observation TYPES records
+it finds. Options are:
+
+    -?|h|help..........This help
+    -by sort[[,sort]]  Order for the observation types, with
+                         fr[eq]  -  keep .signals (1C, .2W, etc.) together
+                         ty[pe]  -  keep types (C, L, S) together
+                         se[pt]  -  preferred order for Septentrio receivers
+                         as[is]  -  keep as is (no sorting)
+    -rm spec[[,spec]]  Remove observation types (spec = [sys:]regex )
+    -v                 Verbose (increase verbosity level)
+
+For RINEX version 3 the result of the sort options is
+
+    -by freq|sept  ->  C1C L1C S1C C2W L2W ...             (keep .1C, .2W, etc. together)
+    -by type       ->  C1C C1W ... L1C L2W ... S1C S2W ... (keep types together)
+
+For RINEX version 2 the result of the sort options is always the same for the
+first five observations "C1 L1 L2 P2 C2", but differs thereafter
+
+    -by freq  ->  C1 L1 L2 P2 C2 S1 S2 C5 L5 S5 C7 L7 S7 ...
+    -by type  ->  C1 L1 L2 P2 C2 C5 C7 ... L5 L7 ... S1 S2 S5 S7 ...
+    -by sept  ->  C1 L1 L2 P2 C2 C5 L5 C7 L7 ... S1 S2 S5 S7 ...
+
+The option "sept" is a mix of "freq" and "type"; basically it is the same as "freq", but
+puts all signal strength types at the end like in "type".
+
+The option "-rm spec[[,spec]]" specifies the observation types to remove. This is
+a comma separated list with "spec" a Perl regular expession "regex" operating on all
+systems or a key value pair "sys:regex" with a Perl regular expression operating on a
+designated system sys (G, R, E, C, S, J, I). For example "G:2L,E:7,D.." removes all
+GPS "2L' observations (C2L, L2L, D2L, S2L), all Galileo observations on frequency 7,
+and all Doppler observations.
+
+Examples:
+
+    rnxobssort -by freq C1 C2 L1 L2 P2 S1 S2
+    rnxobssort -by sept C1 P2 C2 C5 C7 L1 L2 L5 L7 S1 S2 S5 S7
+    rnxobssort -by sept,freq,type C1 P2 C2 C5 C7 L1 L2 L5 L7 S1 S2 S5 S7
+
+    grep TYPES data/MX5C1340.25O | rnxobssort -by type
+
+    grep TYPES data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxobssort -by freq
+    grep TYPES data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxobssort -by freq,type,sept
+
+(c) 2025 by Hans van der Marel, Delft University of Technology.
 ```
 
-### RINEX compability
+### RINEX compatibility
 
 One defining characteristic of `rnxedit` and the underlying `librnxio` is that only blocks of text are manipulated. The basic text blocks are
 
