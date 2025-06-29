@@ -17,6 +17,9 @@
 #      @header=fmtobshead2($obsid2);
 #      @header=fmtobshead3($obsid3);
 #
+#   Replace and/or splice records in the rinex header 
+#      $header = rnxheadersplice($header,$newrecords);
+#
 #   RINEX observation type translation functions:
 #   ---------------------------------------------
 #
@@ -204,6 +207,7 @@
 #           29 June 2025 by Hans van der Marel
 #               - added rnxobstype3sort, rnxobstype2sort, rnxobstype3rm,
 #                 rnxobstype2rm, iniobsidx2 and iniobsidx3 functions
+#               - added rnxheadersplice function
 #               - updated documentation
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
@@ -419,6 +423,46 @@ sub fmtobshead3{
    }
 
    return @header;
+}
+
+sub rnxheadersplice{
+
+   # Replace and/or splice records in the rinex header 
+   # Usuage:
+   #
+   #   $header = rnxheadersplice($header,$newrecords);
+   #
+   # with @{$header} the header records and @{$newrecords} the 
+   # new records to replace the ones in or insert at the end of
+   # @{$header}. 
+   #
+   # (c) Hans van der Marel, Delft University of Technology.
+
+   my ($header,$newrecords)=@_;
+   
+   my %modify=();
+   foreach my $line (@$newrecords) {
+       my $recid=substr($line,60);$recid =~ s/\s*$//;
+       $modify{$recid}++;
+   }
+
+   foreach my $recid ( keys %modify ) {
+       my $index  = [ grep { substr($header->[$_],60) =~ /$recid/ } 0..$#{$header} ] ;
+       my $new  = [ grep { substr($_,60) =~ /$recid/ } @$newrecords ];
+       my $length = scalar(@$index);
+       if ( $length == 0 ) {
+          splice @{$header},-1,0,@$new;
+          #print $fherr "Inserted $modify{$recid} \"$recid\" record(s) at the end of the rinex header\n";
+       } elsif ( ( $index->[$length-1] - $index->[0] +1 ) == $length ) {
+          splice @{$header},$index->[0],$length,@$new;
+          #print $fherr "Replaced $length \"$recid\" record(s) by $modify{$recid} updated records\n";
+       } else {
+          die "Header records to replace must be continuous";
+       }
+   }
+   
+   return $header;
+   
 }
 
 ###########################################################################
@@ -1192,7 +1236,7 @@ sub iniobsidx2 {
    my ($obsid2,$satsys) = @_;
   
    my $colidx={};
-   foreach my $sys ( @$satsys) {
+   foreach my $sys ( split(//,$satsys) ) {
       $colidx->{$sys} = [ 0 .. $#{$obsid2} ];
       #print "$sys => [ "; foreach my $tmp ( @{$colidx->{$sys}} ) { print $tmp ." "; }; print "]\n";
    }

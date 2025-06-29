@@ -44,6 +44,8 @@
 #              - cfgfile option hidden from user as it is not yet implemented
 #              - updated analyze function 
 #              - filenames on the command line is now working
+#           29 June 2025 by Hans van der Marel
+#              - added observation type sorting and removal to filtering
 #              - beta0 release on github
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
@@ -107,6 +109,8 @@ my $Result = GetOptions( \%Config,
                         end|e=s
                         int|i=s
                         satsys|s=s
+                        sort|by=s
+                        remove|rm=s
                       ) );
 $Config{help} = 1 if ( ! $Result  );
 
@@ -225,6 +229,12 @@ Filtering options:
     -e endtime.........Observation end time [yyyy-mm-dd[ T]]hh:mm[:ss]
     -i interval........Observation interval [sec] 
     -s satsys..........Satellite systems to include [GRECJS]
+    -by sort[[,sort]]  Order for the observation types, with
+                         fr[eq]  -  keep .signals (1C, .2W, etc.) together
+                         ty[pe]  -  keep types (C, L, S) together
+                         se[pt]  -  preferred order for Septentrio receivers
+                         as[is]  -  keep as is (no sorting)
+    -rm spec[[,spec]]  Remove observation types (spec = [sys:]regex )
 
 Rinex version 2/3+ conversion options:
 
@@ -246,6 +256,28 @@ General options:
                        on the commandline will be overwritten (the originals
                        will be saved with an extra extention .orig)
     -v                 Verbose (increase verbosity level)
+
+For RINEX version 3 the result of the sort options is 
+
+    -by freq|sept  ->  C1C L1C S1C C2W L2W ...             (keep .1C, .2W, etc. together)
+    -by type       ->  C1C C1W ... L1C L2W ... S1C S2W ... (keep types together)
+
+For RINEX version 2 the result of the sort options is always the same for the
+first five observations "C1 L1 L2 P2 C2", but differs thereafter
+
+    -by freq  ->  C1 L1 L2 P2 C2 S1 S2 C5 L5 S5 C7 L7 S7 ...
+    -by type  ->  C1 L1 L2 P2 C2 C5 C7 ... L5 L7 ... S1 S2 S5 S7 ...
+    -by sept  ->  C1 L1 L2 P2 C2 C5 L5 C7 L7 ... S1 S2 S5 S7 ...
+
+The option "sept" is a mix of "freq" and "type"; basically it is the same as "freq", but 
+puts all signal strength types at the end like in "type".
+
+The option "-rm spec[[,spec]]" specifies the observation types to remove. This is
+a comma separated list with "spec" a Perl regular expession "regex" operating on all
+systems or a key value pair "sys:regex" with a Perl regular expression operating on a
+designated system sys (G, R, E, C, S, J, I). For example "G:2L,E:7,D.." removes all 
+GPS "2L' observations (C2L, L2L, D2L, S2L), all Galileo observations on frequency 7, 
+and all Doppler observations. 
 
 Examples:
 
@@ -393,12 +425,78 @@ sub convertrnx{
   my ($receivertype,$obsid3,$obsid2)=ScanRnxHdr($rnxheaderin);
   # Optionally convert the RINEX header to different format
   my $rnxheadertmp=$rnxheaderin;
-  my $colidx=[];
+  my $colidx={};
+  my $reorder=0;
   if ( $mainversout ne $mainversin ) {
      #my ($obsid2,$obsid3,$colidx,$rnxheaderout)=CnvRnxHdr($versin,$versout,$rnxheaderin,$Config{markertype},$mixedfile);
      ($obsid2,$obsid3,$colidx,$rnxheadertmp)=CnvRnxHdr($versin,$versout,$rnxheaderin,$Config{markertype},$mixedfile);
+     $reorder=1;
+  } else {
+     #initialize $colidx in case it will be needed later
+     if ( $versout > 2.99 ) {
+         $colidx=iniobsidx3($obsid3);
+     } else {
+         $colidx=iniobsidx2($obsid2,'GRES');
+     }
   }
-  # Set filter options and adjust header accordingly
+  # Optional sorting of observations types 
+  if ( exists($Config{sort}) ) {
+     if ( $versout > 2.99 ) {
+        ($obsid3,$colidx) = rnxobstype3sort( $obsid3,$colidx , $Config{sort});
+        print $fherr ("\nRINEX 3 observation types sorted using ** -by $Config{sort} **:\n\n"); 
+        if ( $verbose > 0 ) {
+           prtobstype3($fherr,$obsid3);
+           prtobsidx($fherr,$colidx);
+        }
+     } else {
+        my $indices=[];
+        ($obsid2,$indices) = rnxobstype2sort( $obsid2,$indices , $Config{sort});
+        print $fherr ("\nRINEX 2 observation types sorted using ** -by $Config{sort} **:\n\n"); 
+        foreach my $sys ( keys %$colidx ) {
+            @{$colidx->{$sys}} = @{$colidx->{$sys}}[ @$indices ];
+        }
+        if ( $verbose > 0 ) {
+           prtobstype2($fherr,$obsid2);
+           print "[ "; foreach my $tmp ( @$indices) { print $fherr $tmp ." "; }; print "]\n";
+           prtobsidx($fherr,$colidx);
+        }
+     }
+     $reorder=1;
+  }
+  # Optional removal of observations types 
+  my $rmtypes={};
+  if ( exists($Config{remove}) ) {
+     if ( $versout > 2.99 ) {
+        ($obsid3, $colidx, $rmtypes) = rnxobstype3rm($obsid3, $colidx, $Config{remove});
+        if ( $verbose > 0 ) {
+           print $fherr ("\nRINEX 3 observation types after applying -rm $Config{remove}:\n\n"); 
+           prtobstype3($fherr,$obsid3);
+           prtobsidx($fherr,$colidx);
+        }
+        print $fherr ("\nRemoved RINEX 3 observation types using -rm $Config{remove}:\n\n"); 
+        prtobstype3($fherr,$rmtypes);
+     } else {
+        ($obsid2, $colidx, $rmtypes) = rnxobstype2rm($obsid2, $colidx, $Config{remove});
+        if ( $verbose > 0 ) {
+           print $fherr ("\nRINEX 2 observation types after applying -rm $Config{remove}:\n\n"); 
+           prtobstype2($fherr,$obsid2);
+           prtobsidx($fherr,$colidx);
+        }
+        print $fherr ("\nRemoved RINEX 2 observation types using -rm $Config{remove}:\n\n"); 
+        prtobstype3($fherr,$rmtypes);
+     }
+     $reorder=1;
+  }
+  if ( exists($Config{sort}) || exists($Config{remove}) ) {
+     my @newobstypes;
+     if ( $versout > 2.99 ) {
+         @newobstypes=fmtobshead3($obsid3);
+     } else {
+         @newobstypes=fmtobshead2($obsid2);
+     } 
+     $rnxheadertmp=rnxheadersplice($rnxheadertmp,\@newobstypes);
+  }
+  # Set window and decimation filter options and adjust header accordingly
   my ($windowopt,$rnxheadertmp2)=FilterOptions($rnxheadertmp,\%Config);
   if ( $verbose > 0 ) {
      print $fherr "Time of first obs: ".gmtime($windowopt->{begin})."\n";
@@ -467,7 +565,7 @@ sub convertrnx{
 
     # Reorder the columns (in case of different input and output versions)
 
-    if ( ( $mainversout ne $mainversin ) && $keep && ( ($epoflag <= 1) || ($epoflag == 6) ) ) {
+    if ( $reorder && $keep && ( ($epoflag <= 1) || ($epoflag == 6) ) ) {
       # Have observation data, re-order the fields in $data
       $data=ReorderRnxData($data,$colidx);
       $nsat=scalar(@{$data});
