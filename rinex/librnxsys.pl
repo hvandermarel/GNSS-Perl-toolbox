@@ -57,6 +57,9 @@
 #   Reorder observation fields in RINEX data array
 #      $data=ReorderRnxData($nsat,$data,$obsidx);
 #
+#   Sort observation records in RINEX data array on satellite id.
+#      $data=SortRnxData($data,$satsys);
+#
 #   RINEX observation type definition functions:
 #   --------------------------------------------
 #
@@ -209,6 +212,8 @@
 #                 rnxobstype2rm, iniobsidx2 and iniobsidx3 functions
 #               - added rnxheadersplice function
 #               - updated documentation
+#           30 June 2025 by Hans van der Marel
+#               - added SortRnxData function
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -1355,6 +1360,53 @@ sub ReorderRnxData{
   return $dataout;
   
 }
+
+sub SortRnxData{
+
+  # Sort observation records in RINEX data array on satellite id.
+  # Usuage
+  #  
+  #    $data=SortRnxData($data,$satsys);
+  #
+  # with $data a reference to an array of RINEX observation records and $satsys 
+  # a string with the preferred satellite system order (e.g. "GRES"). 
+  # Data for systems not in $satsys will be deleted.
+  # 
+  # Each observations record consists of a satellite id in the first 3 
+  # characters, folowed by blocks of 16 characters with the observation data. 
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($data,$satsys)=@_;
+
+  # Hash with the system order
+  
+  my %tr;
+  my $i=0;
+  foreach my $sys ( split(//,$satsys) ) {
+      $tr{$sys}=$i; $i++;
+  }
+  
+  # Only keep systems that are present in $sysorder
+
+  my $dataout = [ grep { /^[$satsys]/} @{$data} ];
+
+  # Numeric satellite ids for sorting
+
+  my @ids=();
+  for my $orgrec (@{$dataout}) {
+    push @ids , $tr{substr($orgrec,0,1)}.substr($orgrec,1,2);
+  }
+
+  # Reorder the observation records
+
+  my @indices = sort { $ids[$a] <=> $ids[$b] } 0 .. $#ids;
+  $dataout = [ @{$dataout}[ @indices ] ];
+
+  return $dataout;
+  
+}
+
 
 ###########################################################################
 # RINEX observation type definition functions

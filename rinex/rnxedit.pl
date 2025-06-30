@@ -46,6 +46,8 @@
 #              - filenames on the command line is now working
 #           29 June 2025 by Hans van der Marel
 #              - added observation type sorting and removal to filtering
+#           30 June 2025 by Hans van der Marel
+#              - added sorting on satellite id (using satsys option)
 #              - beta0 release on github
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
@@ -74,7 +76,7 @@ use strict;
 require "librnxio.pl";
 require "librnxsys.pl";
 
-$VERSION = 20250629;
+$VERSION = 20250630;
 
 my $fherr=*STDERR;
 
@@ -439,11 +441,14 @@ sub convertrnx{
          $colidx=iniobsidx2($obsid2,'GRES');
      }
   }
+  my $obsid2in=[ @$obsid2 ];
+  #my $obsid3in={ %$obsid3 };
+  my @newcomments=();
   # Optional sorting of observations types 
   if ( exists($Config{sort}) ) {
      if ( $versout > 2.99 ) {
         ($obsid3,$colidx) = rnxobstype3sort( $obsid3,$colidx , $Config{sort});
-        print $fherr ("\nRINEX 3 observation types sorted using ** -by $Config{sort} **:\n\n"); 
+        push @newcomments, "RINEX 3 observation types sorted using \"-by $Config{sort}\""; 
         if ( $verbose > 0 ) {
            prtobstype3($fherr,$obsid3);
            prtobsidx($fherr,$colidx);
@@ -451,7 +456,7 @@ sub convertrnx{
      } else {
         my $indices=[];
         ($obsid2,$indices) = rnxobstype2sort( $obsid2,$indices , $Config{sort});
-        print $fherr ("\nRINEX 2 observation types sorted using ** -by $Config{sort} **:\n\n"); 
+        push @newcomments, "RINEX 2 observation types sorted using \"-by $Config{sort}\""; 
         foreach my $sys ( keys %$colidx ) {
             @{$colidx->{$sys}} = @{$colidx->{$sys}}[ @$indices ];
         }
@@ -473,8 +478,10 @@ sub convertrnx{
            prtobstype3($fherr,$obsid3);
            prtobsidx($fherr,$colidx);
         }
-        print $fherr ("\nRemoved RINEX 3 observation types using -rm $Config{remove}:\n\n"); 
-        prtobstype3($fherr,$rmtypes);
+        push @newcomments, "Removed RINEX 3 observation types using \"-rm $Config{remove}\""; 
+        foreach my $sys ( sysids($rmtypes) ) {
+           push @newcomments, "   $sys => ".join(' ',@{$rmtypes->{$sys}}); 
+        }
      } else {
         ($obsid2, $colidx, $rmtypes) = rnxobstype2rm($obsid2, $colidx, $Config{remove});
         if ( $verbose > 0 ) {
@@ -482,8 +489,10 @@ sub convertrnx{
            prtobstype2($fherr,$obsid2);
            prtobsidx($fherr,$colidx);
         }
-        print $fherr ("\nRemoved RINEX 2 observation types using -rm $Config{remove}:\n\n"); 
-        prtobstype3($fherr,$rmtypes);
+        push @newcomments, "Removed RINEX 2 observation types using \"-rm $Config{remove}\""; 
+        foreach my $sys ( sysids($rmtypes) ) {
+        push @newcomments, "   $sys => ".join(' ',@{$rmtypes->{$sys}}); 
+        }
      }
      $reorder=1;
   }
@@ -495,6 +504,8 @@ sub convertrnx{
          @newobstypes=fmtobshead2($obsid2);
      } 
      $rnxheadertmp=rnxheadersplice($rnxheadertmp,\@newobstypes);
+     @newcomments = map( sprintf("%-60.60s%-20.20s",$_,"COMMENT"),@newcomments);
+     splice( @{$rnxheadertmp}, -1, 0, @newcomments);
   }
   # Set window and decimation filter options and adjust header accordingly
   my ($windowopt,$rnxheadertmp2)=FilterOptions($rnxheadertmp,\%Config);
@@ -508,6 +519,19 @@ sub convertrnx{
   my $rnxheaderout=EdtRnxHdr($rnxheadertmp2);
   WriteRnxHdr($fhout,$rnxheaderout);
   
+  # # remove trailing -99 (blanks) from $colidx <= cannot be done
+  #
+  # if ( $reorder ) {
+  #    foreach my $sys ( keys %$colidx ) {
+  #        print $fherr " $sys ==> ".join(' ',@{$colidx->{$sys}})."\n";
+  #        foreach  my $tmp ( reverse @{$colidx->{$sys}} ) { 
+  #           last if ($tmp != -99);
+  #           pop @{$colidx->{$sys}};
+  #        }
+  #        print $fherr " $sys ==> ".join(' ',@{$colidx->{$sys}})."\n";
+  #     }
+  # }
+  
   # Parse and convert the observation data 
   # --------------------------------------
 
@@ -520,8 +544,8 @@ sub convertrnx{
 
     # Read rinex data
     if ( $versin < 3.00 ) {
-       ($epoch,$epoflag,$clkoffset,$nsat,$data,$skipped,$obsid2upd)=ReadRnx2Data($fhin,$obsid2);
-       $obsid2=$obsid2upd if ( scalar(@$obsid2upd) > 0);
+       ($epoch,$epoflag,$clkoffset,$nsat,$data,$skipped,$obsid2upd)=ReadRnx2Data($fhin,$obsid2in);
+       $obsid2in=$obsid2upd if ( scalar(@$obsid2upd) > 0);
     } else {
        ($epoch,$epoflag,$clkoffset,$nsat,$data,$skipped)=ReadRnx3Data($fhin);
     }
@@ -556,11 +580,12 @@ sub convertrnx{
         $keep=0;
     }
 
-    # Only keep selected systems
+    # Optionally keep only selected systems and sort on satellite id 
 
     if ( exists($Config{satsys}) && $keep && ( ($epoflag <= 1) || ($epoflag == 6) ) ) {
-       @{$data} = grep { /^[$Config{satsys}]/} @{$data};
-      $nsat=scalar(@{$data});
+       # @{$data} = grep { /^[$Config{satsys}]/} @{$data};
+       $data=SortRnxData($data,$Config{satsys});
+       $nsat=scalar(@{$data});
     }
 
     # Reorder the columns (in case of different input and output versions)
