@@ -51,6 +51,7 @@ Getopt::Long::Configure( "prefix_pattern=(-|\/)" );
 my %Config=();
 my $Result = GetOptions( \%Config,
                       qw(
+                        help|?|h
                         sort|by=s
                         remove|rm=s
                         verbose|v

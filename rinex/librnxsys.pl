@@ -208,12 +208,16 @@
 #              - use tell and seek to rewind DATA to original position so that
 #                reading this section multiple times work
 #           29 June 2025 by Hans van der Marel
-#               - added rnxobstype3sort, rnxobstype2sort, rnxobstype3rm,
-#                 rnxobstype2rm, iniobsidx2 and iniobsidx3 functions
-#               - added rnxheadersplice function
-#               - updated documentation
+#              - added rnxobstype3sort, rnxobstype2sort, rnxobstype3rm,
+#                rnxobstype2rm, iniobsidx2 and iniobsidx3 functions
+#              - added rnxheadersplice function
+#              - updated documentation
 #           30 June 2025 by Hans van der Marel
-#               - added SortRnxData function
+#              - added SortRnxData function
+#            1 July 2025 by Hans van der Marel
+#              - new selection mechanism for receiver classes / profiles,
+#                aliases now working, using regular expression syntax
+#              - added new receiver profiles
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -1538,7 +1542,8 @@ sub signaldef{
       $ini->{$header} = {};
     }
     # check for section data
-    if (/(\S+)\s*[=:]\s*(.*?)\s*$/) {
+    # if (/(\S+)\s*[=:]\s*(.*?)\s*$/) {
+    if (/(.*?)\s*[=:]\s*(.*?)\s*$/) {
       $ini->{$header}->{$1} = $2;
     }
   }
@@ -1552,6 +1557,22 @@ sub signaldef{
   # remove leading and trailing white spaces from receiver type
   $rcvrtype =~ s/^\s*|\s*$//g;
   $rcvrtype=uc($rcvrtype);
+  # if receiver class exists, then done, if not process aliases, if that
+  # doesn't resolve, try to find the best matching
+  if ( ! exists($ini->{$rcvrtype}) ) {
+     # process the aliases
+     if ( exists($ini->{"ALIASES"}) ) {
+        if ( my ($matched) = grep $rcvrtype =~ /$ini->{"ALIASES"}->{$_}/ , keys %{$ini->{"ALIASES"}} ) {
+           $rcvrtype=$matched;
+        }
+     }
+  }
+  if ( ! exists($ini->{$rcvrtype}) ) {
+     # find the best matching receiver class 
+     if ( my ($matched) = grep $rcvrtype =~ /$_/ , keys %$ini ) {
+        $rcvrtype=$matched;
+     }
+  }
   if ( ! exists($ini->{$rcvrtype}) ) {
      print STDERR ("\n+------------------------------------------------------+\n");
      print STDERR   ("| WARNING: RECEIVER TYPE NOT FOUND, SELECTED DEFAULT!! |\n");
@@ -1721,56 +1742,107 @@ __DATA__
 # and snr, of the second signal (of that frequency) only the pseudo-range
 # is used.
 # 
-# Compiled by Hans van der Marel, last update 18-Sep-2011, 19-Jun-2025
+# Compiled by Hans van der Marel, last update 18-Sep-2011, 1-Jul-2025
 
-[Aliases]
-TRIMBLE NETR9: NETR9, NETR5
-SEPT MOSAIC-X5: SEPT POLARX5
-DEFAULT: TOPCON
-                                                                                                               
-[TRIMBLE NETR9]
+[ALIASES]
+SEPT POLARX2: ^SEPT POLARX2
+SEPT POLARX5: ^SEPT (POLARX[345]|MOSAIC|ASTERX|ALTUS)
+LEICA GR50: ^LEICA GR
+TRIMBLE GPS12: ^TRIMBLE (4000SS.*|4[78]00|5[78]00|R[78])\$
+TRIMBLE MAXWELL-5: ^TRIMBLE (R[78]\\sGNSS|NETR[358S])\$
+TRIMBLE MAXWELL-6: ^TRIMBLE (NETR9|R10|R2)
+TRIMBLE MAXWELL-7: ^TRIMBLE (ALLOY|BD9..*|R10-2|R12.*)
+
+[LEICA GR50]
+G: 1C 2W 2S 5Q
+R: 1C 1P 2P 2C
+E: 1C 5Q 7Q 8Q
+S: 1C
+
+[LEICA GR50 EXT]
+G: 1C 2W 2S 5Q
+R: 1C 1P 2P 2C 3Q
+E: 1C 5Q 6C 7Q 8Q
+C: 2I 7I 6I 
+J: 1C 2S 5Q
+S: 1C
+
+[TRIMBLE GPS12]
+G: 1C 2W
+
+[TRIMBLE MAXWELL-5]
+G: 1C 2W 2X 5X
+R: 1C 1P 2P 2C 
+S: 1C
+
+[TRIMBLE MAXWELL-6]
 G: 1C 2W 2X 5X
 R: 1C 1P 2P 2C 
 E: 1X 5X 7X 8X 
 S: 1C  
 
-[SEPT MOSAIC-X5]
+[TRIMBLE MAXWELL-6 EXT]
+G: 1C 2W 2X 5X
+R: 1C 1P 2P 2C 3X
+E: 1X 5X 7X 8X 
+C: 2I 6I 7I
+J: 1C 1X 1Z 2X 5X 6X 
+S: 1C  
+
+[TRIMBLE MAXWELL-7]
+G: 1C 2W 2X 5X
+R: 1C 1P 2P 2C 
+E: 1X 5X 7X 8X 
+S: 1C  
+
+[SEPT POLARX2]
+G: 1C 1W 2W 2L 
+R: 1C 1P 2C 2P
+S: 1C
+
+[SEPT POLARX5]
 G: 1C 1W 2W 2L 5Q
 R: 1C 1P 2C 2P
 E: 1C 5Q 7Q 8Q
 S: 1C 5I
 
-[SEPT POLARX5]
-G: 1C 1W 2W 2L 5Q
+[SEPT POLARX5 EXT]
+G: 1C 1W 1L 2W 2L 5Q
 R: 1C 1P 2C 2P 3Q
 E: 1C 5Q 7Q 8Q
 C: 1P 5P 2I 7I 6I 
+J: 1C 1L 1Z 2L 5Q
 S: 1C 5I
 
 [GPS12]
-G: 1C 1W 2W 2L 2X
+G: 1C 1W 2W 2L 2X 2S
 
 [GPS125]
-G: 1C 1W 2W 2L 2X 5Q
+G: 1C 1W 2W 2L 2X 2S 5Q 5I 5X
 
 [GRS12]
-G: 1C 1W 2W 2L 2X
+G: 1C 1W 2W 2L 2X 2S 
+R: 1C 1P 2C 2P
+S: 1C
+
+[GRS125]
+G: 1C 1W 2W 2L 2X 2S 5Q 5I 5X
 R: 1C 1P 2C 2P
 S: 1C
 
 [GRES12]
-G: 1C 1W 2W 2L 2X
+G: 1C 1W 2W 2L 2X 2S 
 R: 1C 1P 2C 2P
 E: 1C 7Q
 S: 1C
 
 [GRES125]
-G: 1C 1W 2W 2L 2X 5Q
-R: 1C 1P 2C 2P 3Q
+G: 1C 1W 2W 2L 2X 2S 5Q 5I 5X
+R: 1C 1P 2C 2P 
 E: 1C 5Q 7Q 8Q
 S: 1C 5I
 
 [DEFAULT]
-G: 1C 1W 2W 2X 
+G: 1C 1W 2W 2X 2S
 R: 1C 1P 2P 2C
 S: 1C 

@@ -55,10 +55,11 @@ Getopt::Long::Configure( "prefix_pattern=(-|\/)" );
 my %Config=();
 my $Result = GetOptions( \%Config,
                       qw(
+                        help|?|h
                         cfgfile|c=s
                         receiverclass|x=s
                         versout|r=s
-                        verbose|v
+                        verbose|v+
                       ) );
 $Config{help} = 1 if ( ! $Result  );
 
@@ -81,7 +82,7 @@ if ( exists($Config{versout}) ) {
 
 my $verbose=0;
 if ( exists($Config{verbose}) ) {
-  $verbose=1;
+  $verbose=$Config{verbose};
 } 
 
 # Get input observation types 
@@ -125,11 +126,12 @@ print $fherr (  "Selected receiver type/class: ", $selectedrcvrtype, "\n\n" );
 print $fherr (  "Signal type definitions for ", $selectedrcvrtype, "\n\n"); 
 prtsignaldef($fherr,$signaltypes);
 
+
 # Conversion table(s) between RINEX version 2 and 3 observation type for all allowable signals
 
 my ($cnvtable2to3,$cnvtable3to2)=obstypedef($signaltypes);
 
-if ( $verbose > 0 ) {
+if ( $verbose > 1 ) {
    print $fherr ("\nConversion table for RINEX version 2 to 3 for all allowable signals\n\n"); 
    prttypedef($fherr,$cnvtable2to3);
    print $fherr ("\nConversion table for RINEX version 3 to 2 for all allowable signals\n\n"); 
@@ -139,10 +141,10 @@ if ( $verbose > 0 ) {
 # Check that we have observation types as input and determine direction
 
 if ( ! ( $hadobstype2 || $hadobstype3 ) ) {
-   print "\nNo RINEX observation types found on STDIN or in the arguments, done.\n";
+   print $fherr "\nNo RINEX observation types found on STDIN or in the arguments, done.\n";
    exit;
 } elsif ( $hadobstype2 && $hadobstype3 ) {
-   print "\nBoth RINEX version 2 and 3 observation types found, disambiguate before proceeding.\n";
+   print $fherr "\nBoth RINEX version 2 and 3 observation types found, disambiguate before proceeding.\n";
    exit;
 }
 
@@ -157,12 +159,14 @@ if ( $hadobstype2 ) {
        prtobstype2($fherr,$obsid2in);
        print $fherr ("\nRINEX version 3 observation types (output from obstype2to3)\n"); 
        prtobstype3($fherr,$obsid3);
+    }
+    if ( $verbose > 1 ) {
        print $fherr ("\nRinex 2->3 column reordering (column number in rinex2)\n\n"); 
        prtobsidx($fherr,$colidx);
     }
 
     my @cnvtable23=fmtcnvtable($obsid2in,$obsid3,$colidx,$versin,$versout);
-    print "\n";
+    print $fherr "\n";
     for my $line (@cnvtable23) {
         print $fherr $line."\n";
     }
@@ -172,7 +176,7 @@ if ( $hadobstype2 ) {
 
     my ($obsid2new,$colidx2)=obstype3to2($mixedfile,$obsid3,$cnvtable3to2);
 
-    if ( $verbose > 0 ) {
+    if ( $verbose > 1 ) {
        print $fherr ("\nRINEX version 3 observation types (from previous step)\n"); 
        prtobstype3($fherr,$obsid3);
        print $fherr ("\nRINEX version 2 observation types (output from obstype3to2)\n"); 
@@ -187,7 +191,7 @@ if ( $hadobstype2 ) {
     }
 
     my @cnvtable32=fmtcnvtable($obsid2new,$obsid3,$colidx2,$versout,$versin);
-    print "\n";
+    print $fherr "\n";
     for my $line (@cnvtable32) {
        print $fherr $line."\n";
     }
@@ -205,6 +209,8 @@ if ( $hadobstype3 ) {
        prtobstype3($fherr,$obsid3in);
        print $fherr ("\nRINEX version 2 observation types (output from obstype3to2)\n"); 
        prtobstype2($fherr,$obsid2);
+    }
+    if ( $verbose > 1 ) {
        print $fherr ("\nRinex 2->3 column reordering (column number in rinex2)\n\n"); 
        prtobsidx($fherr,$colidx2);
        my $colidx=invobsidx($colidx2);
@@ -213,7 +219,7 @@ if ( $hadobstype3 ) {
     }
 
     my @cnvtable32=fmtcnvtable($obsid2,$obsid3in,$colidx2,$versout,$versin);
-    print "\n";
+    print $fherr "\n";
     for my $line (@cnvtable32) {
        print $fherr $line."\n";
     }
@@ -222,7 +228,7 @@ if ( $hadobstype3 ) {
 
     my ($obsid3new,$colidx)=obstype2to3($mixedfile,$obsid2,$cnvtable2to3);
 
-    if ( $verbose > 0 ) {
+    if ( $verbose > 1 ) {
        print $fherr ("\nRINEX version 2 observation types (from previous step)\n"); 
        prtobstype2($fherr,$obsid2);
        print $fherr ("\nRINEX version 3 observation types (output from obstype2to3)\n"); 
@@ -234,7 +240,7 @@ if ( $hadobstype3 ) {
     }
 
     my @cnvtable23=fmtcnvtable($obsid2,$obsid3new,$colidx,$versin,$versout);
-    print "\n";
+    print $fherr "\n";
     for my $line (@cnvtable23) {
         print $fherr $line."\n";
     }
