@@ -49,6 +49,8 @@
 #           30 June 2025 by Hans van der Marel
 #              - added sorting on satellite id (using satsys option)
 #              - beta0 release on github
+#            1 July 2025 by Hans van der Marel
+#              - added help on extension of -x option (replaces cfgfile option)
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -76,7 +78,7 @@ use strict;
 require "librnxio.pl";
 require "librnxsys.pl";
 
-$VERSION = 20250630;
+$VERSION = 20250701;
 
 my $fherr=*STDERR;
 
@@ -91,7 +93,6 @@ my $Result = GetOptions( \%Config,
                         verbose|v+
                         version|r=s
                         outputdir|o=s
-                        cfgfile|c=s
                         receiverclass|x=s
                         markername|mo=s
                         markernumber|mn=s
@@ -245,7 +246,14 @@ Rinex version 2/3+ conversion options:
     -x receiverclass...Receiver class (overrides receiver type) for conversion:
                           GPS12    Only include GPS L1 and L2 observations
                           GPS125   Only include GPS L1, L2 and L5 observations
-                          GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+                          GRS12    Only include GPS+GLO L1/L2 and SBAS L1
+                          GRS125   Only include GPS L1/L2/L5, GLO L1/L2 and SBAS L1/L5
+                          GRES12   Only include GPS+GLO L1/L2, GAL L1/E5b and SBAS L1
+                          GRES125  Only include L1/L2/L5/E5b for GPS/GLO/GAL/SBAS
+                       The above options are useful for converting from rinex 3 to 2,
+                       but are too general for the other direction. For converting from
+                       rinex 2 to 3 let the software decide (use the build in templates) 
+                       or specify explicitly, e.g. "G:1C 2W 2L 5Q,E:1C 5Q".
     -n.................Do nothing. Only analyze the headers and give feedback
                        on the translated observation types; useful to check if you 
                        agree with the conversion of observation types before 
@@ -291,7 +299,7 @@ Examples:
     cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | $Script -mo ZANDMOTOR -mn ZAND \
        -ah 1.023 -r 2 -x GRES125 -s GRS > zand1340.25o
 
-    cat MX5C1340.25O | $Script -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x GPS12 \
+    cat MX5C1340.25O | $Script -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x "G:1C 2W 2L" \
         -b 7:30 -e 8:20 > ZAND00NLD_R_20251340730_50M_10S_MO.rnx
 
     $Script -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
@@ -301,14 +309,10 @@ a new file is created and in the last example the existing file is overwritten
 (the original is saved with extension .orig). In the second example a RINEX 
 version 3 file is edited and filtered. The third and fourth example includes
 conversion to RINEX version 2.11 and version 3.00 files respectively, using
-different translation profiles (GRES125 and GPS12).
+different translation profiles.
 
 (c) 2011-2025 by Hans van der Marel, Delft University of Technology.
 EOT
-
-# Unimplemented options (as of yet):
-#    -c cfgfile.........Name of optional configuration file, overrides the standard 
-#                       rinex 2/3 conversion tables hardwired in the program
 
 }
 
@@ -1188,7 +1192,7 @@ sub setversout{
         $versout=$versin;
      } else {
         # main version different from input, version is set to the default for the main output version
-        $mainversout = $versout == 2 ? 2 : 3;  
+        $mainversout = $versoutopt == 2 ? 2 : 3;  
         $versout = checkrnxversion($versoutopt);
      } 
   } else {

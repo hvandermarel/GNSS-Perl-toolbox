@@ -15,6 +15,8 @@
 #           29 June 2025 by Hans van der Marel
 #               - few minor corrections
 #               - released to github
+#            1 July 2025 by Hans van der Marel
+#              - added help on extension of -x option (replaces cfgfile option)
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -41,7 +43,7 @@ use warnings;
 require "librnxio.pl";
 require "librnxsys.pl";
 
-$VERSION=20250625;
+$VERSION=20250701;
 
 # Input and output file handles
 
@@ -56,7 +58,6 @@ my %Config=();
 my $Result = GetOptions( \%Config,
                       qw(
                         help|?|h
-                        cfgfile|c=s
                         receiverclass|x=s
                         versout|r=s
                         verbose|v+
@@ -271,7 +272,14 @@ it finds. Options are:
     -x receiverclass...Receiver class (overrides receiver type) for conversion:
                           GPS12    Only include GPS L1 and L2 observations
                           GPS125   Only include GPS L1, L2 and L5 observations
-                          GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+                          GRS12    Only include GPS+GLO L1/L2 and SBAS L1
+                          GRS125   Only include GPS L1/L2/L5, GLO L1/L2 and SBAS L1/L5
+                          GRES12   Only include GPS+GLO L1/L2, GAL L1/E5b and SBAS L1
+                          GRES125  Only include L1/L2/L5/E5b for GPS/GLO/GAL/SBAS
+                       The above options are useful for converting from rinex 3 to 2,
+                       but are too general for the other direction. For converting from
+                       rinex 2 to 3 let the software decide (use the build in templates) 
+                       or specify explicitly, e.g. "G:1C 2W 2L 5Q,E:1C 5Q".
     -v                 Verbose (increase verbosity level)
 
 Examples:
@@ -280,16 +288,12 @@ Examples:
     $Script -v C1 L1 L2 P2 S1 S2
     $Script -x GRES125 C1 L1 L2 P2 S1 S2
 
-    grep TYPES data/MX5C1340.25O | $Script -v -x GRES125
+    grep TYPES data/MX5C1340.25O | $Script -v -x "G:1C 2W 2L 5Q,E:1C 5Q"
 
     grep TYPES data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | $Script -x GRES125
 
 (c) 2011-2025 by Hans van der Marel, Delft University of Technology.
 EOT
-
-# Unimplemented options (as of yet):
-#    -c cfgfile.........Name of optional configuration file, overrides the standard 
-#                       rinex 2/3 conversion tables hardwired in the program
 
 }
 

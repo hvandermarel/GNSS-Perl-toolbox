@@ -1526,6 +1526,16 @@ sub signaldef{
   
   my $ini = {};
   my $header;
+  
+  # check if $rcvrtype contains a configuration string, if so, no need to read DATA
+  if ( $rcvrtype =~ /^[GRESJIS]:.+/ ) {
+     my $sigdef={};
+     foreach my $tmp ( split(/[;,]/,$rcvrtype) ){
+        my ($satid,$value)=split(/:/,$tmp);
+        $sigdef->{$satid} = $value;
+     }
+     return ($sigdef,$rcvrtype);
+  }
      
   my $data_start = tell DATA; # save the position
   while (<DATA>) {
@@ -1828,18 +1838,18 @@ S: 1C
 [GRS125]
 G: 1C 1W 2W 2L 2X 2S 5Q 5I 5X
 R: 1C 1P 2C 2P
-S: 1C
+S: 1C 5I
 
 [GRES12]
 G: 1C 1W 2W 2L 2X 2S 
 R: 1C 1P 2C 2P
-E: 1C 7Q
+E: 1C 7Q 7I 7X
 S: 1C
 
 [GRES125]
 G: 1C 1W 2W 2L 2X 2S 5Q 5I 5X
 R: 1C 1P 2C 2P 
-E: 1C 5Q 7Q 8Q
+E: 1C 5Q 7Q 8Q 5I 7I 8I 5X 7X 8X
 S: 1C 5I
 
 [DEFAULT]
