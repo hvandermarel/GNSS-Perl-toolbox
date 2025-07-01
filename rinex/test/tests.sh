@@ -96,3 +96,19 @@ cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -mo ZANDMOTOR -mn ZAND -ah 1.023 
 diff -w ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2 ZAND00NLD_R_20251340730_50M_30S_GO.rnx > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff
 diff -w ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff expect/ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff
 
+# rinex editing and filtering (one or more files)
+# -----------------------------------------------
+#
+# Wildcards are permitted to edit a batch of files 
+
+./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
+diff zand1340.25o zand1340.25o.orig
+
+./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans *.25o
+
+# $ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
+# Edit mx5c1340.25o -> mx5c1340.25o, renamed mx5c1340.25o to mx5c1340.25o.orig, done
+# $
+# $ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans *.25o
+# Edit mx5c1340.25o -> mx5c1340.25o, renamed mx5c1340.25o to mx5c1340.25o.orig, done
+# Edit zand1340.25o -> zand1340.25o, renamed zand1340.25o to zand1340.25o.orig, done
