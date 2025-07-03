@@ -9,6 +9,5 @@ Two test scripts, each with several examples, are provided
 
 together with plain ascii files with their expected output.
 
-The input and expected output RINEX data files are provided as a separate download (`fafa`) with the latest release. 
-Download this zip file and unpack it in the `test` folder. This will create a folder `./data` with input RINEX observation files
+The input and expected output RINEX data files are provided as a separate download `rnxedit_v0-9_test_datasets.zip` as an extra assest with the latest release. Unpack this zip file in the `test` folder, this will create a folder `./data` with input RINEX observation files
 and  `./expected` with the output of `rnxedit`. The test script `tests.sh`  compares its outcomes with the files in `./expected`. 
