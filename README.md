@@ -10,8 +10,8 @@ The subdirectory `rinex` contains Perl scripts for pre-processing RINEX observat
 - **rnxedit**: RINEX observation file editing, filtering and conversion for RINEX version 2, 3 and 4 observation files
 - **rnxstats**: RINEX observation statistics with number of epochs, satellites and observations
 
-and Perl libraries **librnxio.pl** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`)
-and **librnxsys.pl** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`).
+and Perl modules **librnxio.pm** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`),
+**librnxsys.pm** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`) and **libglonass.pm** with functions for retrieving historic GLONASS slot numbers.
 
 ### GNSS date and time conversion
 
@@ -22,8 +22,6 @@ You can install the full toolbox or only selected parts.
 ### Linux, Mac, other unix
 
 Perl is installed by default on most Linux distributions and Mac. Simply copy the scripts to a folder in your path and they should work. Keep the libraries within the same folder as the scripts.
-
-If you want, you can create a symbolic link (without the `.pl` extension) from folder in your search path to each script.
 
 ### Microsoft windows
 
