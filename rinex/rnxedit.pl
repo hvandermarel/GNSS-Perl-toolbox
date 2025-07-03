@@ -1083,8 +1083,10 @@ sub CnvRnxHdr2to3{
      # version 3.02-3.05, introduced with 3.02, but strongly depricated with version 4
      splice @rnxheaderout,-1,0,sprintf("%-60.60s%-20.20s","","GLONASS COD/PHS/BIS");
   } 
-  my $glonasscfg = dirname(__FILE__) . "/glonass.cfg";
-  if ( $config->{strict} && $versout >= 3.02 && -e $glonasscfg ) {
+  #my $glonasscfg = dirname(__FILE__) . "/glonass.cfg";
+  my $glonasscfg;
+  #if ( $config->{strict} && $versout >= 3.02 && -e $glonasscfg ) {
+  if ( $config->{strict} && $versout >= 3.02 ) {
      # Insert GLONASS SLOT / FRQ records, mandatory since version 3.02, requires
      # libglonass.pl Perl module
      my $dateoffirstobs;

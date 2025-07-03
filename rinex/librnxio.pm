@@ -115,9 +115,10 @@ sub ReadRnxId{
 
     s/\R\z//; # chomp();
     
-    $headid=uc(substr($_,60));
+    #$headid=uc(substr($_,60));
 
-    if ( $headid =~ /^RINEX VERSION \/ TYPE/) {
+    #if ( $headid =~ /^RINEX VERSION \/ TYPE/) {
+    if ( $_ =~ /RINEX VERSION \/ TYPE$/ && uc(substr($_,60)) =~ /^RINEX VERSION \/ TYPE/ ) {
        $rnxvers=substr($_, 0,9);
        $rnxvers=~ s/^\s+//;
        $reqtype=uc(substr($reqtype,0,1));
@@ -127,7 +128,8 @@ sub ReadRnxId{
        $mixed=substr($_, 40,1);
        $idrec=$_;
        last;
-    } elsif ( eof($fhin) || ( $headid =~ /^END OF HEADER/) ) {
+    #} elsif ( eof($fhin) || ( $headid =~ /^END OF HEADER/) ) {
+    } elsif ( eof($fhin) || ( $_ =~ /END OF HEADER$/) ) {
        die "RINEX file (?) has no or invalid RINEX VERSION / TYPE record, quiting...";
     } else {
       $skipped++;
