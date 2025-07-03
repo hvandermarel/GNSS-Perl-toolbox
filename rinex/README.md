@@ -11,7 +11,7 @@ RINEX observation file editing, filtering and conversion for RINEX version 2, 3 
 By typing `rnxedit -h` in a terminal (or on some systems `./rnxedit.pl -h`) a brief instruction is provided: 
 
 ```
-rnxedit                                            (Version: 20250629)
+rnxedit                                            (Version: 20250702)
 -------
 Edit, filter and convert RINEX observation files.
 Syntax:
@@ -61,7 +61,14 @@ Rinex version 2/3+ conversion options:
     -x receiverclass...Receiver class (overrides receiver type) for conversion:
                           GPS12    Only include GPS L1 and L2 observations
                           GPS125   Only include GPS L1, L2 and L5 observations
-                          GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+                          GRS12    Only include GPS+GLO L1/L2 and SBAS L1
+                          GRS125   Only include GPS L1/L2/L5, GLO L1/L2 and SBAS L1/L5
+                          GRES12   Only include GPS+GLO L1/L2, GAL L1/E5b and SBAS L1
+                          GRES125  Only include L1/L2/L5/E5b for GPS/GLO/GAL/SBAS
+                       The above options are useful for converting from rinex 3 to 2,
+                       but are too general for the other direction. For converting from
+                       rinex 2 to 3 let the software decide (use the build in templates)
+                       or specify explicitly, e.g. "G:1C 2W 2L 5Q,E:1C 5Q".
     -n.................Do nothing. Only analyze the headers and give feedback
                        on the translated observation types; useful to check if you
                        agree with the conversion of observation types before
@@ -107,7 +114,7 @@ Examples:
     cat MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -mo ZANDMOTOR -mn ZAND
        -ah 1.023 -r 2 -x GRES125 -s GRS > zand1340.25o
 
-    cat MX5C1340.25O | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x GPS12
+    cat MX5C1340.25O | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -r 3 -x "G:1C 2W 2L"
         -b 7:30 -e 8:20 > ZAND00NLD_R_20251340730_50M_10S_MO.rnx
 
     rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
@@ -117,16 +124,15 @@ a new file is created and in the last example the existing file is overwritten
 (the original is saved with extension .orig). In the second example a RINEX
 version 3 file is edited and filtered. The third and fourth example includes
 conversion to RINEX version 2.11 and version 3.00 files respectively, using
-different translation profiles (GRES125 and GPS12).
+different translation profiles.
 
 (c) 2011-2025 by Hans van der Marel, Delft University of Technology.
 ```
 
 ### Dependencies
 
-The `librnxio.pl` and `librnxsys.pl` Perl libraries must be installed in the same directory as `rnxedit.pl`. 
-The file `glonass.cfg` is required for conversion from RINEX version 2.11 to version 3.02 and higher. Also this file must be installed in the same directory as the script. 
-If you don't like to have all these files in your search path, put the files in a separate directory and create a symbolic link to only `rnxedit.pl` from a directory in the search path.
+The `librnxio.pm`, `librnxsys.pm` and `libglonass.pm` Perl modules must be installed in the same directory as `rnxedit.pl`. 
+If you don't like to have all these files in your search path, put the files in a separate directory and create a small shell script \ to execute `rnxedit.pl` (symbolic links fail to resolve the modules).
 
 Other dependecies of `rnxedit` are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are very common and included by most Perl distributions.
 
@@ -140,7 +146,7 @@ result. Their functionality is similar to, but more extensive than, the analyze 
 For brief instructions on **rnxobstype** type `rnxobstype -h`:  
 
 ```
-rnxobstype                                            (Version: 20250625)
+rnxobstype                                            (Version: 20250702)
 ----------
 Translate RINEX version 2 to version 3 observation types and vice versa.
 Syntax:
@@ -160,7 +166,14 @@ it finds. Options are:
     -x receiverclass...Receiver class (overrides receiver type) for conversion:
                           GPS12    Only include GPS L1 and L2 observations
                           GPS125   Only include GPS L1, L2 and L5 observations
-                          GRES125  Only include L1/L2/L5 for GPS/GLO/GAL/SBAS.
+                          GRS12    Only include GPS+GLO L1/L2 and SBAS L1
+                          GRS125   Only include GPS L1/L2/L5, GLO L1/L2 and SBAS L1/L5
+                          GRES12   Only include GPS+GLO L1/L2, GAL L1/E5b and SBAS L1
+                          GRES125  Only include L1/L2/L5/E5b for GPS/GLO/GAL/SBAS
+                       The above options are useful for converting from rinex 3 to 2,
+                       but are too general for the other direction. For converting from
+                       rinex 2 to 3 let the software decide (use the build in templates)
+                       or specify explicitly, e.g. "G:1C 2W 2L 5Q,E:1C 5Q".
     -v                 Verbose (increase verbosity level)
 
 Examples:
@@ -169,12 +182,11 @@ Examples:
     rnxobstype -v C1 L1 L2 P2 S1 S2
     rnxobstype -x GRES125 C1 L1 L2 P2 S1 S2
 
-    grep TYPES data/MX5C1340.25O | rnxobstype -v -x GRES125
+    grep TYPES data/MX5C1340.25O | rnxobstype -v -x "G:1C 2W 2L 5Q,E:1C 5Q"
 
     grep TYPES data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxobstype -x GRES125
 
 (c) 2011-2025 by Hans van der Marel, Delft University of Technology.
-
 ```
 For brief instructions on **rnxobssort** type `rnxobssort -h`:  
 
@@ -237,6 +249,9 @@ Examples:
 
 (c) 2025 by Hans van der Marel, Delft University of Technology.
 ```
+### Examples
+
+Examples and test cases are provided in the folder `./test`. 
 
 ### RINEX compatibility
 
@@ -277,7 +292,7 @@ APPROX POSITION XYZ       2.10-       2.10-
 ANTENNA: DELTA H/E/N      2.10-       2.10-
 
 # / TYPES OF OBSERV       2.10-2.11   2.10-2.11
-WAVELENGTH FACT L1/2      2.10-2.11   2.10-2.11
+WAVELENGTH FACT L1/2      2.10-2.11  
 
 MARKER TYPE               3.00-       3.00-
 SYS / # / OBS TYPES       3.00-       3.00-
@@ -322,10 +337,10 @@ for the phase shifts and Glonass biases to indicate that these are unknown (in a
 Because of the "strong deprication" of these records in version 4 we consider this not as a great miss.
 
 The only problem is when the Glonass slot numbers are missing, which may happen in input versions below 3.02. To cover
-this situation all Glonass slot numbers that have been used in the past are provided in the file `glonass.cfg`, which is used
-by the software to insert the Glonass slot numbers at the date of observation into the rinex header. This is a 
+this situation all Glonass slot numbers that have been used in the past are provided by the Perl module `libglonass.pm`, 
+which is used by the software to insert the Glonass slot numbers at the date of observation into the rinex header. This is a 
 solution that works well with older rinex version 2 files, but beware, when converting contemporary rinex
-version 2 files make sure the `glonass.cfg` file is up to date.
+version 2 files make sure the `libglonass.pm` module is up to date.
 
 ### Comparison with other tools (`teqc`, `gfzrnx`)
 
@@ -359,13 +374,100 @@ To me, `rnxedit` is not intended as a full replacement for `teqc` or `gfzrnx`, i
 
 ## RINEX observation statistics - `rnxstats`
 
-RINEX observation statistics with number of epochs, satellites and observations. *Not yet available, expected early July 2025*
+RINEX observation statistics with number of epochs, satellites and observations. 
+Brief instructions are provided by `rnxstats -h`
+
+```
+rnxstats                                            (Version: 20250703)
+--------
+Statistics for RINEX version 2 and version 3 observation files. The syntax
+for simple scanning of files is
+
+    rnxstats [-p] [-s] [-v] [-e <Pattern>] [-i <Pattern>] RINEX_observation_file(s)
+
+    rnxstats [-p] [-s] [-v] < inputfile
+    cat inputfile | rnxstats [-p] [-s] [-v][-options]
+    zcat inputfile | crx2rnx | rnxstats [-p] [-s] [-v]
+
+Rinex observation files may be (Hatanaka) compressed. If no RINEX observation
+file(s) are given on the command line, and no database operations are planned,
+the script reads from the standard input.
+The extended syntax for data base operations is
+
+    rnxstats -b <dbfile> [-a] [-l] [-v] [-e <Pattern>] [-i <Pattern>]
+                                                      RINEX_observation_file(s)
+    rnxstats -b <dbfile> -l [sxe] [-e <Pattern>] [-i <Pattern>] [-v]
+    rnxstats -b <dbfile> -l [iqr1] [-e <Pattern>] [-i <Pattern>] [-v]
+
+The first syntac is used to update the database, the second to list the content
+of the database, and third to produce an index listing.
+Available options are
+
+    -b <dbfile>.....Database file to update/read
+    -a .............Append to database file (the full db is not read)
+    -l [sxeiqr1]....List database contents (option can be combined)
+        -l s          Only summary table (default for -l)
+        -l x          Include output per file
+        -l e          Include overview of missing and incomplete files
+        -l i          Index with file latency
+        -l q          Index with percentage of data (overrides i)
+        -l r          Print index in reverse order (needs i or q)
+        -l 1          Print index in one column mode (needs i or q)
+    -e <pattern>....Pattern to exclude rinex input files/db-entries (optional).
+    -i <pattern>....Pattern to include rinex input files/db-entries (optional).
+    -p .............Print extended information for each rinex input file
+    -s .............Print a list of satellites for each rinex input file
+    -v .............Verbose output
+    -?|h|help.......This help.
+
+Wildcard specifiers are allowed on the command line for the rinex files.
+
+(c) 2011-2025 by Hans van der Marel, Delft University of Technology.
+```
+This utility processes multiple RINEX observation files and provides statistics on the number of epochs, number of satellites, etc.
+An example output, taken from the [TU Delft GNSS data center](https://gnss1.tudelft.nl/dpga/scripts/prtstats.php?list=s) is
+```
+  station     #files  #incmpl #missing  intv  nepo avsat   G    R    E    C    J    I    S  nsat  G  R  E  C  J  I  S latency  ingest
+_________ __________ ________ ________ _____ _____ _____ ____ ____ ____ ____ ____ ____ ____ ____ __ __ __ __ __ __ __ _______ _______
+AMEL00NLD         31        0        0  30.0  2880  51.3 12.2  9.5 10.7 15.5  0.4  0.0  3.0  128 32 24 27 39  3  0  3    1:33    1:38
+APEL00NLD         31        0        0  30.0  2880  50.2 12.1  9.4 10.6 15.6  0.4  0.0  2.1  135 32 24 29 44  3  0  3    1:27    1:33
+CBW100NLD         31        0        0  30.0  2880  47.9 11.7  9.0 10.0 15.0  0.1  0.0  2.1  132 32 24 29 43  2  0  3    2:26    2:29
+DELF00NLD         31        0        0  30.0  2880  57.3 11.9 10.2 11.2 16.7  0.3  2.6  4.4  149 32 26 29 45  3  7  7    1:21    1:25
+DELZ00NLD         30        0        1  30.0  2880  47.3 11.6  8.9 10.0 14.5  0.0  0.0  2.2  127 32 24 27 41  0  0  3    3:42    3:45
+DHEL00NLD         31        0        0  30.0  2880  41.9 10.0  8.3  9.0 12.8  0.0  0.0  1.6  130 32 24 29 42  0  0  3    4:09    4:14
+DLF100NLD         31        0        0  30.0  2880  51.0 12.1  9.4 10.8 15.3  0.3  0.0  3.0  132 32 24 29 42  3  0  3    1:12    1:17
+EIJS00NLD         31        0        0  30.0  2880  59.7 11.7 10.0 11.1 17.1  0.2  3.0  6.5  149 32 26 29 45  3  7  7    3:29    3:34
+ENSC00NLD         31        0        0  30.0  2880  47.5  9.9  9.0  9.6 14.1  0.0  0.0  5.0  137 32 26 29 44  0  0  6   15:25   15:28
+EPEN00NLD         31        2        0  30.0  2878  45.2  9.3  8.7  9.2 13.2  0.0  0.0  4.7  135 32 26 29 43  0  0  5    0:52    0:57
+HARL00NLD         31        0        0  30.0  2880  47.8 11.6  9.1 10.0 14.7  0.3  0.0  2.1  135 32 24 29 43  3  0  4  138:15  138:18
+HHO200NLD         31        0        0  30.0  2880  47.5 11.5  9.0 10.0 14.8  0.1  0.0  2.1  132 32 24 29 43  1  0  4    4:26    4:30
+IJMU00NLD         31        0        0  30.0  2880  52.3 12.1  9.4 10.6 16.9  0.3  0.0  3.0  134 32 24 27 45  3  0  3   19:57   20:00
+KOS100NLD         31        0        0  30.0  2880  60.8 12.0 10.2 11.3 17.2  0.3  3.1  6.5  149 32 26 29 45  3  7  7    1:22    1:26
+MASL00NLD         31        0        0  30.0  2880  51.3 11.3  9.9 10.7 15.7  0.2  0.0  3.5  139 32 26 29 44  2  0  6    1:03    1:08
+NTUS00SGP         31        0        0  30.0  2880  44.8  9.7  6.5  8.7 16.0  3.9  0.0  0.0  134 32 24 27 47  4  0  0   70:33   70:36
+PBCM00BEL         31        0        0  30.0  2880  39.1  9.9  8.0  8.3 13.0  0.0  0.0  0.0  125 32 24 27 42  0  0  0    8:09   12:33
+PBLB00BEL         29        2        3  30.0  2741  38.8  9.7  7.9  8.1 13.0  0.0  0.0  0.0  126 32 24 27 43  0  0  0    6:60   48:44
+ROVN00NLD         31        3        0  30.0  2878  55.0 11.7 10.0 11.1 17.1  0.2  0.0  4.9  141 32 26 29 45  3  0  7    0:51    0:58
+SCHI00NLD         31        0        0  30.0  2880  43.8 10.5  8.6  9.2 13.4  0.1  0.0  2.1  132 32 24 29 43  1  0  3    4:04    4:09
+STWK00NLD         31        0        0  30.0  2880  54.5 11.5  9.9 10.9 16.7  0.3  0.0  5.1  141 32 26 29 44  3  0  7   15:31   15:33
+TERS00NLD         31        0        0  30.0  2880  61.0 12.1 10.2 11.3 17.4  0.4  3.0  6.5  149 32 26 29 45  3  7  8    3:56    3:60
+TXE200NLD         31        0        0  30.0  2880  48.2 11.8  9.2 10.1 14.3  0.0  0.0  2.8  124 32 24 27 38  0  0  3   30:05   30:11
+VBZH00NLD         17        1       14  30.0  2821  53.4 11.7  9.5 10.6 15.4  0.0  0.0  6.3  130 32 24 27 40  0  0  7   15:28   15:32
+VLIE00NLD         31        0        0  30.0  2880  47.3 11.7  9.1 10.1 14.2  0.1  0.0  2.1  132 32 24 29 42  2  0  3    2:20    2:23
+VLIS00NLD         31        0        0  30.0  2880  49.6 11.9  9.4 10.5 15.5  0.1  0.0  2.1  134 32 24 29 43  3  0  3    4:21    4:24
+VSLF00NLD         26        0        5  30.0  2880  17.6  9.7  0.0  7.8  0.0  0.0  0.0  0.0   56 31  0 25  0  0  0  0  250:54  250:55
+WSRA00NLD         31        1        0  30.0  2879  50.8 12.0  9.3 10.4 15.6  0.4  0.0  2.9  130 32 24 27 41  3  0  3   16:41   16:44
+WSRT00NLD         31        0        0  30.0  2880  57.4 11.6  9.4 10.5 15.9  0.4  2.8  6.6  141 32 24 27 40  3  7  8    1:12    1:17
+ZEGV00NLD         31        0        0  30.0  2880  55.4 11.9 10.1 11.2 16.9  0.3  0.0  4.9  142 32 26 29 45  3  0  7    0:60    1:06
+```
+with for each station a count of the number of files (#files), incomplete (#incmpl) and missing files (#missing) over the last month, the data interval (intv), average number of epochs (nepo), satellites (avsat) in total and by system, and number of different satellites (nsat) observed over the period of one day in total and by system, and two measures for the average latency (latency and ingest) of the files.
 
 ## Perl function libraries
 
-The scripts require one or more of the following Perl function libraries:
+The scripts require one or more of the following Perl modules:
 
-- **librnxio.pl** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`)
-- **librnxsys.pl** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`).
+- **librnxio** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`)
+- **librnxsys** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`).
+- **libglonass** with functions and historic slot allocations for GLONASS (required for `rnxedit`)
 
-These libraries can also be useful in the own right. Documentation on the functions and the data structures that are used is given in the header section of the libraries. 
+These modules can also be useful in the own right. Documentation on the functions and the data structures that are used is given in the header section of the modules. 
