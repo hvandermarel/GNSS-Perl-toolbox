@@ -37,13 +37,14 @@ use File::Basename;
 use lib dirname (__FILE__);
 use vars qw( $VERSION );
 
+use librnxio qw( ScanRnxHdr );
+use librnxsys;
+
 use strict;
 use warnings;
 
-require "librnxio.pl";
-require "librnxsys.pl";
 
-$VERSION=20250701;
+$VERSION=20250702;
 
 # Input and output file handles
 
@@ -97,6 +98,7 @@ if ( scalar(@ARGV) > 0 ) {
    # RINEX version 2 observation types can be input from the command line
    $obsid2in = [ @ARGV ];
    $hadobstype2=1;
+   $receivertype="";
 } else {
    # Read observation types from STDIN (formatted as RINEX OBS TYPES records)
    my @header=();
