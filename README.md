@@ -1,5 +1,5 @@
 # GNSS-Perl-toolbox
-GNSS Perl toolbox with rinex editing and statistics, time conversions, and other utilities.
+GNSS Perl toolbox with rinex editing, filtering, statistics, time and file conversions, and a few other utilities.
 
 ## Description
 
@@ -13,7 +13,9 @@ The subdirectory `rinex` contains Perl scripts for pre-processing RINEX observat
 and Perl modules **librnxio.pm** with functions for reading and writing RINEX version 2, 3 and 4 observation files (required for `rnxedit` and `rnxstats`),
 **librnxsys.pm** with functions for RINEX observation handling and converting between RINEX version 2 and 3 (required for `rnxedit`) and **libglonass.pm** with functions for retrieving historic GLONASS slot numbers.
 
-### GNSS date and time conversion
+### GNSS date, time and file management utilities
+
+The subdirectory `utils` will contain in a future release several Perl scripts for GNSS date, time and file management.
 
 ## Installation
 
