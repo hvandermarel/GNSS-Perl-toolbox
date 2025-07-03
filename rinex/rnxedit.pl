@@ -51,6 +51,9 @@
 #              - beta0 release on github
 #            1 July 2025 by Hans van der Marel
 #              - added help on extension of -x option (replaces cfgfile option)
+#            2 July 2025 by Hans van der Marel
+#              - converted libraries to packages, import with use instead of require
+#              - glonass functions and data in their own package (use libglonass)
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -72,13 +75,14 @@ use File::Basename;
 use Time::Local;
 use lib dirname (__FILE__);
 
+use librnxio;
+use librnxsys;
+use libglonass;
+
 use warnings;
 use strict;
 
-require "librnxio.pl";
-require "librnxsys.pl";
-
-$VERSION = 20250701;
+$VERSION = 20250702;
 
 my $fherr=*STDERR;
 
@@ -466,7 +470,7 @@ sub convertrnx{
         }
         if ( $verbose > 0 ) {
            prtobstype2($fherr,$obsid2);
-           print "[ "; foreach my $tmp ( @$indices) { print $fherr $tmp ." "; }; print "]\n";
+           print $fherr "[ "; foreach my $tmp ( @$indices) { print $fherr $tmp ." "; }; print $fherr "]\n";
            prtobsidx($fherr,$colidx);
         }
      }
@@ -523,7 +527,9 @@ sub convertrnx{
   my $rnxheaderout=EdtRnxHdr($rnxheadertmp2);
   WriteRnxHdr($fhout,$rnxheaderout);
   
-  # # remove trailing -99 (blanks) from $colidx <= cannot be done
+  # # remove trailing -99 (blanks) from $colidx <= commented out as
+  # - cannot be done for rinex 2 (realy bad idea)
+  # - not very common for rinex 3
   #
   # if ( $reorder ) {
   #    foreach my $sys ( keys %$colidx ) {
@@ -979,8 +985,6 @@ sub CnvRnxHdr{
        print $fherr ("\nRinex output column order (3->2)\n\n"); 
        prtobsidx($fherr,$colidx);
      }
-#  } else {
-#    $colidx=XXXXXXX
   }
 
   # Modify and copy the header lines
@@ -1122,7 +1126,8 @@ sub CnvRnxHdr3to2{
    
   my $hasinsertedtype2=0;
   my %haveremovedrnx3types=();
-  
+  my $removed=0;
+   
   foreach my $line (@{$rnxheaderin}) {
 
     my $headid=uc(substr($line,60));
@@ -1161,6 +1166,11 @@ sub CnvRnxHdr3to2{
          $haveremovedrnx3types{$headid}=1;
       }
       push @rnxheaderout,sprintf("%-60.60s%-20.20s",substr($line,0,60),"COMMENT");
+    } elsif ( $config->{strict} && $headid =~ /^# OF SATELLITES/ ) {
+       push @rnxheaderout,sprintf("%-60.60s%-20.20s","Satellite count removed from RINEX header","COMMENT");
+    } elsif ( $config->{strict} && $headid =~ /^PRN \/ # OF OBS/ ) {
+       push @rnxheaderout,sprintf("%-60.60s%-20.20s","Observation counts removed from RINEX header","COMMENT") if ($removed == 0);
+       $removed++;
     } else {
       push @rnxheaderout,$line;
     }

@@ -1,3 +1,168 @@
+# -----------------------------------------------------------------------------
+# 
+# Perl functions for retrieving GLONASS slot number, SVN and sensor name
+#
+# -----------------------------------------------------------------------------
+#
+# Return GLONASS slot number, SVN and sensor name
+#
+# Functions:
+#
+#      $glosat = glonassdata($date,$cfgfile);
+#      prtglonassdata($glosat);
+#      @header = glonassslothdr($glosat);
+#
+# Example:
+#
+#    #!/bin/perl
+#
+#    use File::Basename;
+#    use lib dirname (__FILE__);
+#    require "libglonass.pl";
+#
+#    my $glosat = glonassdata($ARGV[0],"glonass.cfg");
+# 
+#    prtglonassdata($glosat);
+#
+#    my @header = glonassslothdr($glosat);
+#    foreach my $line (@header) {
+#       print $line."\n";
+#    }
+#
+# Created:  23 June 2025 by Hans van der Marel
+# Modified: 24 June 2025 by Hans van der Marel
+#              - refactored into function library
+#              - Apache 2.0 license notice
+# Modified:  2 July 2025 by Hans van der Marel
+#              - converted to package(with .pm extension)
+#
+# Copyright 2025 Hans van der Marel, Delft University of Technology.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+package libglonass;
+
+use strict;
+use warnings;
+
+use Exporter 'import';
+our @EXPORT = qw(glonassdata prtglonassdata glonassslothdr); # symbols to export by default
+#our @EXPORT_OK = qw(); # symbols to export on request
+
+
+###########################################################################
+# Glonass meta data functions
+###########################################################################
+
+sub prtglonassdata{
+
+  # Print GLONASS prn, svn, sensor name and slot number. 
+  # Usuage
+  #  
+  #    my $glosat = glonassdata($date);
+  #    prtglonassdata($glosat);
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($glosat) = @_;
+  
+  printf("prn   svn   sensor        ifrq\n---   ---   -----------   ----\n");
+  foreach my $prn ( sort keys %$glosat ) {
+    printf("%3s   %3s   %-12.12s   %3s\n",$prn,$glosat->{$prn}[0],$glosat->{$prn}[1],, $glosat->{$prn}[2]);
+  }
+  printf("\n");
+ 
+  return;
+}
+
+sub glonassslothdr{
+
+  # Return an array with RINEX header lines with "GLONASS SLOT / FRQ" records.
+  # Usuage
+  #  
+  #    my $glosat = glonassdata($date);
+  #    my @header = glonassslothdr($glosat);
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($glosat) = @_;
+
+  # 11 R04  6 R05  1 R06 -4 R11  0 R12 -1 R13 -2 R14 -7 R21  4 GLONASS SLOT / FRQ #
+  #    R22 -3 R23  3 R24  2                                    GLONASS SLOT / FRQ #
+
+  my @header=();
+  my $count=0;
+  my $line=sprintf("%3.0f ", scalar(%$glosat) );
+  foreach my $prn ( sort keys %$glosat ) {
+    if ( $count >= 8 ) {
+       push @header, sprintf("%-60.60s%-20.20s",$line,"GLONASS SLOT / FRQ #");
+       $line="    ";
+       $count=0;
+    }
+    $line .= sprintf("%-3.3s%3.0f ",$prn,$glosat->{$prn}[2]);
+    $count++;
+  }
+  push @header, sprintf("%-60.60s%-20.20s",$line,"GLONASS SLOT / FRQ #");
+
+  return @header;
+  
+}
+
+sub glonassdata{
+
+  # Return hash of array reference with all active GLONASS satellites at 
+  # a specific data, with slot number (ifrq), SVN and sensor name.
+  # Usuage
+  #  
+  #    my $glosat = glonassdata($date);
+  #
+  # with $date a string with YYYY-MM-DD or YYYYMMDD format. Output is
+  # a refererence to a hash of arrays, which is accessed as
+  #
+  #     ( $svn, $sensor, $ifrq ) = $glosat->{$prn}
+  #
+  #  with $prn the GLONASS PRN number "R##".
+  #
+  # (c) Hans van der Marel, Delft University of Technology.
+
+  my ($date,$glofile) = @_;
+  $date =~ s/-//g;
+  
+  my %glosat=();
+  
+  #open(GLONASS, $glofile) or die("Could not open file $glofile.");
+  #while (my $line = <GLONASS>) { 
+  my $data_start = tell DATA; # save the position
+  while (my $line = <DATA>) { 
+     # print $line; 
+     chomp $line;
+     next if ( $line =~ /^#/ || $line =~ /^\s*$/ ); 
+     my ($prn,$svn,$number,$start,$end,$sensor,$ifrq) = split(" ",$line);
+     $start =~ s/-//g;
+     $end =~ s/-//g;
+     $end =~ s/current/99999999/;
+     if ( $date > $start && $date < $end ) {
+        $glosat{$prn} = [ $svn, $sensor, $ifrq ];
+     }
+  }
+  #close GLONASS;
+  seek DATA, $data_start, 0;  # reposition the filehandle right past __DATA__
+  
+  return \%glosat;
+}
+
+1;
+__DATA__
 #DATASOURCE: SATELLIT_I20.SAT, University of Bern.
 #DOWNLOADED AND MODIFIED: 2025-06-23 BY HM
 #VALID UNTIL: 2025-06-23

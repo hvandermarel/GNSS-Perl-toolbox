@@ -64,6 +64,8 @@
 #              - checked with strict pragma
 #              - added optional $runby argument to WriteRnxId sub
 #              - added Apache 2.0 license notice
+#            2 July 2025 by Hans van der Marel
+#              - converted to package (with pm extension)
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -79,8 +81,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+package librnxio;
+
 use strict;
 use warnings;
+
+use Exporter 'import';
+our @EXPORT = qw(ReadRnxId WriteRnxId ReadRnxHdr WriteRnxHdr ReadRnx2Data WriteRnx2Data 
+          ReadRnx3Data WriteRnx3Data ScanRnxHdr); # symbols to export by default
+#our @EXPORT_OK = qw(); # symbols to export on request
 
 sub ReadRnxId{
 
@@ -138,7 +147,7 @@ sub WriteRnxId{
   # Usuage
   #  
   #    WriteRnxId($fhout,$rnxvers,$type,$idrec);
-  #    WriteRnxId($fhout,$rnxvers,$type,$idrec,$runby);
+  #    WriteRnxId($fhout,$rnxvers,$type,$idrec,$runby,$pgm);
   #
   # with $fhout the file handle, $type the file type (e.g. "O"), $rnxvers the
   # version string, $mixed a 1-char flag indication mixed observation files,
@@ -148,17 +157,20 @@ sub WriteRnxId{
   #
   # (c) Hans van der Marel, Delft University of Technology.
 
-  my ($fhout,$rnxvers,$type,$idrec,$runby)=@_;
+  my ($fhout,$rnxvers,$type,$idrec,$runby,$pgm)=@_;
 
   my $DATE=sprintf("%04d%02d%02d %02d%02d%02d UTC",(gmtime)[5]+1900,(gmtime)[4]+1,(gmtime)[3,2,1,0]);
   my $USER=$ENV{'USER'};
   $USER=$ENV{'USERNAME'} if (exists($ENV{'USERNAME'}) ) ;
   $USER=$runby if ( defined($runby) ) ;
   my ( $SCRIPT ) = ( $0 =~ m#([^\\/]+)$# ); $SCRIPT =~ s#\.pl$##;
+  $SCRIPT=$SCRIPT."-v".$main::VERSION if ( defined($main::VERSION) );
+  $SCRIPT=$pgm if ( defined($pgm) );
 
   substr($idrec,0,9)=sprintf("%9.2f",$rnxvers);
   print $fhout ($idrec,"\n")          or die "can't write RINEX ID record: $!";
-  printf $fhout ("%-20.20s%-20.20s%-20.20sPGM / RUN BY / DATE \n",$SCRIPT."-v".$VERSION,$USER,$DATE)  or die "can't write RINEX PRM / RUN BY record: $!";      
+  #printf $fhout ("%-20.20s%-20.20s%-20.20sPGM / RUN BY / DATE \n",$SCRIPT."-v".$VERSION,$USER,$DATE)  or die "can't write RINEX PRM / RUN BY record: $!";      
+  printf $fhout ("%-20.20s%-20.20s%-20.20sPGM / RUN BY / DATE \n",$SCRIPT,$USER,$DATE)  or die "can't write RINEX PRM / RUN BY record: $!";      
 
   return;
   

@@ -78,14 +78,6 @@
 #
 #   Return an array with logically sorted system ids present in the input hash
 #      @sysids=sysids($signaltypes)
-# 
-#   Glonass meta data functions:
-#   ----------------------------
-#
-#   Return GLONASS slot number, SVN and sensor name
-#      $glosat = glonassdata($date,$cfgfile);
-#      prtglonassdata($glosat);
-#      @header = glonassslothdr($glosat);
 #
 #   Data structures and variables:
 #   ------------------------------
@@ -170,26 +162,6 @@
 #   @{$signals}      - array with 2-char signal types for a particular system
 #   @sysids          - array with logically sorted system ids (sysids output)
 #
-#   Examples
-#   --------
-#
-#   Return GLONASS slot number, SVN and sensor name
-#
-#    #!/bin/perl
-#
-#    use File::Basename;
-#    use lib dirname (__FILE__);
-#    require "libglonass.pl";
-#
-#    my $glosat = glonassdata($ARGV[0],"glonass.cfg");
-# 
-#    prtglonassdata($glosat);
-#
-#    my @header = glonassslothdr($glosat);
-#    foreach my $line (@header) {
-#       print $line."\n";
-#    }
-#
 # Created:   9 September 2011 by Hans van der Marel
 # Modified: 11 February 2012 by Hans van der Marel
 #              - Public version for testing
@@ -218,6 +190,11 @@
 #              - new selection mechanism for receiver classes / profiles,
 #                aliases now working, using regular expression syntax
 #              - added new receiver profiles
+#            2 July 2025 by Hans van der Marel
+#              - converted to package (with pm extension)
+#              - moved Glonass functions to its own package
+#              - modified ReorderRnxData to remove systems not in $obsidx or
+#                satellites without any observations at all
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -233,9 +210,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+package librnxsys;
+
 use strict;
 use warnings;
 
+use Exporter 'import';
+our @EXPORT = qw( 
+      prtobstype2 prtobstype3 fmtobshead2 fmtobshead3 rnxheadersplice
+      obstype2to3 obstype3to2 fmtcnvtable invobsidx
+      rnxobstype3sort rnxobstype2sort rnxobstype3rm rnxobstype2rm
+      iniobsidx2 iniobsidx3 prtobsidx ReorderRnxData SortRnxData
+      obstypedef prttypedef signaldef prtsignaldef sysids); # symbols to export by default
+our @EXPORT_OK = qw(prtobshead2 prtobshead3); # symbols to export on request
 
 ###########################################################################
 # RINEX observation type printing and formatting functions
@@ -797,6 +784,8 @@ sub invobsidx{
      push @tmp3idx, $nan;
   }
   foreach my $sysid (sysids($obs2idx)) {
+    # skip systems witout any observations (not a good idea...)
+    #next if ( not grep { $_ ne $nan } @{$obs2idx->{$sysid}} );
     @{$obs3idx->{$sysid}}=@tmp3idx;
     my $j=0;
     foreach my $i (@{$obs2idx->{$sysid}}) {
@@ -1342,6 +1331,7 @@ sub ReorderRnxData{
   for my $orgrec (@{$data}) {
     my $sysid=substr($orgrec,0,1);
     my $newrec=substr($orgrec,0,3);
+    next if ( ! exists( $obsidx->{$sysid} ) );
     my $inew=0;
     my $lastobs=int((length($orgrec)-4)/16)+1;
     #print STDERR "$orgrec\n";
@@ -1351,10 +1341,10 @@ sub ReorderRnxData{
       #print STDERR "--> $i $inew  $iold \n";
       if ( ( $iold != $nan ) && ( $iold <= $lastobs ) ) {
         $newrec.=substr($orgrec,$iold*16+3,16);
+        $inew++;
       } else {
         $newrec.=$empty;
       }
-      $inew++;
     }
     if ( $inew > 0 ) {
       push @{$dataout}, $newrec;
@@ -1642,104 +1632,6 @@ sub sysids{
   
   return @sysids;
 
-}
-
-###########################################################################
-# Glonass meta data functions
-###########################################################################
-
-sub glonassdata{
-
-  # Return hash of array reference with all active GLONASS satellites at 
-  # a specific data, with slot number (ifrq), SVN and sensor name.
-  # Usuage
-  #  
-  #    my $glosat = glonassdata($date);
-  #
-  # with $date a string with YYYY-MM-DD or YYYYMMDD format. Output is
-  # a refererence to a hash of arrays, which is accessed as
-  #
-  #     ( $svn, $sensor, $ifrq ) = $glosat->{$prn}
-  #
-  #  with $prn the GLONASS PRN number "R##".
-  #
-  # (c) Hans van der Marel, Delft University of Technology.
-
-  my ($date,$glofile) = @_;
-  $date =~ s/-//g;
-  
-  my %glosat=();
-  
-  open(GLONASS, $glofile) or die("Could not open file $glofile.");
-  while (my $line = <GLONASS>) { 
-     # print $line; 
-     chomp $line;
-     next if ( $line =~ /^#/ || $line =~ /^\s*$/ ); 
-     my ($prn,$svn,$number,$start,$end,$sensor,$ifrq) = split(" ",$line);
-     $start =~ s/-//g;
-     $end =~ s/-//g;
-     $end =~ s/current/99999999/;
-     if ( $date > $start && $date < $end ) {
-        $glosat{$prn} = [ $svn, $sensor, $ifrq ];
-     }
-  }
-  close GLONASS;
-  
-  return \%glosat;
-}
-
-sub prtglonassdata{
-
-  # Print GLONASS prn, svn, sensor name and slot number. 
-  # Usuage
-  #  
-  #    my $glosat = glonassdata($date);
-  #    prtglonassdata($glosat);
-  #
-  # (c) Hans van der Marel, Delft University of Technology.
-
-  my ($glosat) = @_;
-  
-  printf("prn   svn   sensor        ifrq\n---   ---   -----------   ----\n");
-  foreach my $prn ( sort keys %$glosat ) {
-    printf("%3s   %3s   %-12.12s   %3s\n",$prn,$glosat->{$prn}[0],$glosat->{$prn}[1],, $glosat->{$prn}[2]);
-  }
-  printf("\n");
- 
-  return;
-}
-
-sub glonassslothdr{
-
-  # Return an array with RINEX header lines with "GLONASS SLOT / FRQ" records.
-  # Usuage
-  #  
-  #    my $glosat = glonassdata($date);
-  #    my @header = glonassslothdr($glosat);
-  #
-  # (c) Hans van der Marel, Delft University of Technology.
-
-  my ($glosat) = @_;
-
-  # 11 R04  6 R05  1 R06 -4 R11  0 R12 -1 R13 -2 R14 -7 R21  4 GLONASS SLOT / FRQ #
-  #    R22 -3 R23  3 R24  2                                    GLONASS SLOT / FRQ #
-
-  my @header=();
-  my $count=0;
-  my $line=sprintf("%3.0f ", scalar(%$glosat) );
-  foreach my $prn ( sort keys %$glosat ) {
-    if ( $count >= 8 ) {
-       push @header, sprintf("%-60.60s%-20.20s",$line,"GLONASS SLOT / FRQ #");
-       $line="    ";
-       $count=0;
-    }
-    $line .= sprintf("%-3.3s%3.0f ",$prn,$glosat->{$prn}[2]);
-    $count++;
-  }
-  push @header, sprintf("%-60.60s%-20.20s",$line,"GLONASS SLOT / FRQ #");
-
-  return @header;
-  
 }
 
 1;
