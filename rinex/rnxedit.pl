@@ -54,6 +54,8 @@
 #            2 July 2025 by Hans van der Marel
 #              - converted libraries to packages, import with use instead of require
 #              - glonass functions and data in their own package (use libglonass)
+#              - included original interval in decimation test
+#              - abort if observation types are modified in the middle of a rinex file
 #
 # Copyright 2011-2025 Hans van der Marel, Delft University of Technology.
 #
@@ -574,6 +576,11 @@ sub convertrnx{
       #       my ($obsid2upd,$obsid3upd,$colidxupd,$dataupd)=CnvRnxHdr($versin,$versout,$data,$Config{markertype},$mixedfile);
       #       $data=$dataupd;
       #       $nsat=scalar(@{$data});
+      my ($updreceivertype,$updobsid3,$updobsid2)=ScanRnxHdr($data);
+      if ( scalar(@$updobsid2) > 0 || scalar(%$updobsid3) > 0) {
+          print $fherr "***Warning: New header data in middle of rinex (epochflag=4) with modified observation types.\n";
+          die ("Modified observation types are not yet supported, aborting...");
+      }
     }
 
     # Check if epoch is within window (optional) and decimated (optional) to output interval
@@ -586,7 +593,8 @@ sub convertrnx{
           $keep=0;
        }
     }
-    if ( $windowopt->{decimate} && ($epoflag <= 1) && $keep && ( abs( $values[5] - sprintf("%.0f",$values[5]/$windowopt->{decimate})*$windowopt->{decimate} ) > 0.5 ) ) {
+    #if ( $windowopt->{decimate} && ($epoflag <= 1) && $keep && ( abs( $values[5] - sprintf("%.0f",$values[5]/$windowopt->{decimate})*$windowopt->{decimate} ) > 0.5 ) ) {
+    if ( $windowopt->{decimate} && ($epoflag <= 1) && $keep && ( abs( $values[5] - sprintf("%.0f",$values[5]/$windowopt->{decimate})*$windowopt->{decimate} ) > 0.5*$windowopt->{orginterval} ) ) {
         $keep=0;
     }
 
@@ -789,6 +797,7 @@ sub FilterOptions{
   $windowopt{begin}=$begin;
   $windowopt{end}=$end;
   $windowopt{decimate}=$decimate;
+  $windowopt{orginterval}=$interval;
 
   if ( $verbose > 0 ) {
      print $fherr "Time of first obs: $timeoffirstobs\nInterval: $interval\n";
