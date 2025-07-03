@@ -29,8 +29,7 @@
 # -------------------------------
 #
 # Options
-#    -rm 3        to remove GLONASS 3Q observations not supported by version 2.11
-#    -s GRES      to remove BEIDOU observations not supported by version 2.11 and sort observation to the same order
+#    -s GRES      to sort observation to the same order
 #                 as in the rinex 2 original
 #    -sort sept   sort observation types typical to Septentrio receivers
 #
@@ -38,10 +37,18 @@
 #    - extra COMMENTS, no # OF SATELLITES and WAVELENGTH FACT L1/2, in the header
 #    - leading zeros in month, day, hour, minute and seconds of epoch time
 #
-cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -r 2.11 -x GRES125 -sort sept -rm 3 -s GRES > mx5c1340.25o_replicate
+# in earlier version it was necessary to add -rm 3 to remove Glonass L3 and -s GRES to 
+# remove BEIDOU, this is now taken care of as result of the GRES125 profile.
+# cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -r 2.11 -x GRES125 -sort sept -rm 3 -s GRES > mx5c1340.25o_replicate
+echo "rinex 3 -> 2 (replication test)"
+echo "-------------------------------"
+echo "$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -r 2.11 -x GRES125 -sort sept -s GRES > mx5c1340.25o_replicate"
+cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -r 2.11 -x GRES125 -sort sept -s GRES > mx5c1340.25o_replicate
 diff mx5c1340.25o_replicate expect/mx5c1340.25o_replicate
 
-diff -w mx5c1340.25o_replicate data/MX5C1340.25O > mx5c1340.25o_replicate_diff
+echo " "
+echo "$ diff -w mx5c1340.25o_replicate data/MX5C1340.25O"
+diff -w mx5c1340.25o_replicate data/MX5C1340.25O | sed -e "s/^[0-9c0-9].*/============/" > mx5c1340.25o_replicate_diff
 diff -w mx5c1340.25o_replicate_diff expect/mx5c1340.25o_replicate_diff
 
 # rinex 2 -> 3 (replication tests)
@@ -64,6 +71,10 @@ diff -w mx5c1340.25o_replicate_diff expect/mx5c1340.25o_replicate_diff
 #    - no BEIDOU data (not part of rinex 2)
 #    - GALILEO and SBAS data are identical
 #
+echo " "
+echo "rinex 3 -> 2 (replication test)"
+echo "-------------------------------"
+echo "$ data/MX5C1340.25O | ./rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate"
 cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate
 diff MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate expect/MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate
 
@@ -71,12 +82,18 @@ diff MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate expect/MX5C00NLD_R_2025134
 # a filtered outcome on the rinex 3 without BEIDOU, GLONASS 3Q, and GPS 2L. This reduces the differences
 # to only the first two points of the previous test
 #
+echo " "
+echo "$ cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P,G:2L -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2"
 cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P,G:2L -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2
-cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -rm G:2L,R:3 -s EGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3
 diff MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2 expect/MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2
+echo " "
+echo "$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -rm G:2L,R:3 -s EGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3"
+cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -rm G:2L,R:3 -s EGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3
 diff MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3 expect/MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3
 
-diff -w MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2 MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3 > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_diff
+echo " "
+echo "$ diff -w MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2 MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3"
+diff -w MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2 MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3 | sed -e "s/^[0-9c0-9].*/============/" > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_diff
 diff -w MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_diff expect/MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_diff
 
 # rinex editing and filtering
@@ -85,15 +102,22 @@ diff -w MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_diff expect/MX5C00NLD_R
 # Fairly complex example, setting the marker name, number and antenna height, decimating to 30 sec, selecting begin
 # and end times, and selecting only GPS L1 and legacy L2 signals.
 #  
+echo " "
+echo "rinex editing and filtering"
+echo "---------------------------"
+echo "$ cat data/MX5C1340.25O | ./rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm ([578]|C2) > zand1340.25o"
 cat data/MX5C1340.25O | ./rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm "([578]|C2)" > zand1340.25o
 diff zand1340.25o expect/zand1340.25o
 
+echo " "
+echo "$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm ([3578]|2L) > ZAND00NLD_R_20251340730_50M_30S_GO.rnx"
 cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm "([3578]|2L)" > ZAND00NLD_R_20251340730_50M_30S_GO.rnx
 diff ZAND00NLD_R_20251340730_50M_30S_GO.rnx expect/ZAND00NLD_R_20251340730_50M_30S_GO.rnx
 
-
+echo " "
+echo "$ cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -r 3.04 -s G -rm ([3578]|2L) -sort sept > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2"
 cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -r 3.04 -s G -rm "([3578]|2L)" -sort sept > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2
-diff -w ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2 ZAND00NLD_R_20251340730_50M_30S_GO.rnx > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff
+diff -w ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2 ZAND00NLD_R_20251340730_50M_30S_GO.rnx | sed -e "s/^[0-9c0-9].*/============/" > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff
 diff -w ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff expect/ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff
 
 # rinex editing and filtering (one or more files)
@@ -101,14 +125,15 @@ diff -w ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2_diff expect/ZAND00NLD_R_202
 #
 # Wildcards are permitted to edit a batch of files 
 
+echo " "
+echo "rinex editing and filtering (one or more files)"
+echo "-----------------------------------------------"
+echo "$ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o"
 ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
 diff zand1340.25o zand1340.25o.orig
 
-./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans *.25o
+echo " "
+echo "$ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans -o ./tmp *.{25o,25o_replicate}"
+mkdir -p ./tmp
+./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans -o ./tmp *.{25o,25o_replicate}
 
-# $ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
-# Edit mx5c1340.25o -> mx5c1340.25o, renamed mx5c1340.25o to mx5c1340.25o.orig, done
-# $
-# $ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans *.25o
-# Edit mx5c1340.25o -> mx5c1340.25o, renamed mx5c1340.25o to mx5c1340.25o.orig, done
-# Edit zand1340.25o -> zand1340.25o, renamed zand1340.25o to zand1340.25o.orig, done
