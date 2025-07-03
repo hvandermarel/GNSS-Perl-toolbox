@@ -1,34 +1,34 @@
 rinex 3 -> 2 (replication test)
 -------------------------------
-$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -r 2.11 -x GRES125 -sort sept -s GRES > mx5c1340.25o_replicate
+$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -r 2.11 -x GRES125 -sort sept -s GRES > mx5c1340.25o_replicate
 2c2
-< rnxedit-v20250702   hvandermarel        20250703 123312 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152309 UTC PGM / RUN BY / DATE 
 ---
 > rnxedit-v20250702   hvandermarel        20250703 115115 UTC PGM / RUN BY / DATE 
  
 $ diff -w mx5c1340.25o_replicate data/MX5C1340.25O
 2c2
-< < rnxedit-v20250702   hvandermarel        20250703 123312 UTC PGM / RUN BY / DATE 
+< < rnxedit-v20250702   hvandermarel        20250703 152309 UTC PGM / RUN BY / DATE 
 ---
 > < rnxedit-v20250702   hvandermarel        20250703 115115 UTC PGM / RUN BY / DATE 
  
 rinex 3 -> 2 (replication test)
 -------------------------------
-$ data/MX5C1340.25O | ./rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate
+$ data/MX5C1340.25O | rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate
 2c2
-< rnxedit-v20250702   hvandermarel        20250703 123312 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152310 UTC PGM / RUN BY / DATE 
 ---
 > rnxedit-v20250630   hvandermarel        20250630 152415 UTC PGM / RUN BY / DATE 
  
-$ cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P,G:2L -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2
+$ cat data/MX5C1340.25O | rnxedit -mt GEODETIC -r 3.04 -x GRES125 -sort sept -rm R:C2P,G:2L -s CEGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2
 2c2
-< rnxedit-v20250702   hvandermarel        20250703 123313 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152310 UTC PGM / RUN BY / DATE 
 ---
 > rnxedit-v20250630   hvandermarel        20250630 152435 UTC PGM / RUN BY / DATE 
  
-$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -rm G:2L,R:3 -s EGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3
+$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -rm G:2L,R:3 -s EGRS > MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_3
 2c2
-< rnxedit-v20250702   hvandermarel        20250703 123313 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152310 UTC PGM / RUN BY / DATE 
 ---
 > rnxedit-v20250630   hvandermarel        20250630 152436 UTC PGM / RUN BY / DATE 
  
@@ -36,26 +36,30 @@ $ diff -w MX5C00NLD_R_20251340729_59M_10S_MO.rnx_replicate_2 MX5C00NLD_R_2025134
  
 rinex editing and filtering
 ---------------------------
-$ cat data/MX5C1340.25O | ./rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm ([578]|C2) > zand1340.25o
+$ cat data/MX5C1340.25O | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm ([578]|C2) > zand1340.25o
 2c2
-< rnxedit-v20250702   hvandermarel        20250703 123314 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152311 UTC PGM / RUN BY / DATE 
 ---
 > rnxedit-v20250630   hvandermarel        20250630 161114 UTC PGM / RUN BY / DATE 
  
-$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | ./rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm ([3578]|2L) > ZAND00NLD_R_20251340730_50M_30S_GO.rnx
+$ cat data/MX5C00NLD_R_20251340729_59M_10S_MO.rnx | rnxedit -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -s G -rm ([3578]|2L) > ZAND00NLD_R_20251340730_50M_30S_GO.rnx
 2c2
-< rnxedit-v20250702   hvandermarel        20250703 123314 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152311 UTC PGM / RUN BY / DATE 
 ---
 > rnxedit-v20250630   hvandermarel        20250630 160937 UTC PGM / RUN BY / DATE 
  
-$ cat data/MX5C1340.25O | ./rnxedit -mt GEODETIC -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -r 3.04 -s G -rm ([3578]|2L) -sort sept > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2
+$ cat data/MX5C1340.25O | rnxedit -mt GEODETIC -mo ZANDMOTOR -mn ZAND -ah 1.023 -b 7:30 -e 8:20 -i 30 -r 3.04 -s G -rm ([3578]|2L) -sort sept > ZAND00NLD_R_20251340730_50M_30S_GO.rnx_from2
+2d1
+< < rnxedit-v20250702   hvandermarel        20250703 152312 UTC PGM / RUN BY / DATE 
+5d3
+< > rnxedit-v20250702   hvandermarel        20250703 152311 UTC PGM / RUN BY / DATE 
  
 rinex editing and filtering (one or more files)
 -----------------------------------------------
-$ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
+$ rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans zand1340.25o
 Edit zand1340.25o -> zand1340.25o, renamed zand1340.25o to zand1340.25o.orig, done
 2d1
-< rnxedit-v20250702   hvandermarel        20250703 123315 UTC PGM / RUN BY / DATE 
+< rnxedit-v20250702   hvandermarel        20250703 152312 UTC PGM / RUN BY / DATE 
 6,7c5,6
 < NAP30D126                                                   MARKER NUMBER       
 < Hans                TUD                                     OBSERVER / AGENCY   
@@ -67,6 +71,6 @@ Edit zand1340.25o -> zand1340.25o, renamed zand1340.25o to zand1340.25o.orig, do
 ---
 >         1.0230        0.0000        0.0000                  ANTENNA: DELTA H/E/N
  
-$ ./rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans -o ./tmp *.{25o,25o_replicate}
+$ rnxedit -mn NAP30D126 -ah 1.0232 -oa TUD -op Hans -o ./tmp *.{25o,25o_replicate}
 Edit zand1340.25o -> ./tmp/zand1340.25o, done
 Edit mx5c1340.25o_replicate -> ./tmp/mx5c1340.25o_replicate, done
