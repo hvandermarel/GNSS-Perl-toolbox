@@ -5,13 +5,17 @@ specifically on GNSS files that include year, day of year, week, day of week, mo
 and/or day of month information:
 
 - `gpstime.pl` GNSS date and time conversion, file templates, and make file creation
-- `gpsdir` GNSS directory listing 
+- `gpsdir.pl` GNSS directory listing 
 - `gpsdircmp.pl` GNSS directory comparison with different file formats
 - `gpslatency.pl` GNSS file latency 
-- `ydrange.pl` comma separated list of (files with) year-month-day information
 
-Most of the scripts depend on the `libgpstime.pm` Perl module for processing the file templates and date/time conversion.
+These scripts depend on the `libgpstime.pm` Perl module for processing file templates and date/time conversion.
 The module must be installed in the same directory as the scripts. 
+
+Other Perl scripts in this folder (that do not depend on libgpstime.pl) are
+
+- `scanrnx32.pl` Make IGS style index files and extract meta data from RINEX files
+- `ydrange.pl` comma separated list of (files with) year-month-day information
 
 Other dependencies are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are included by most, if not all, 
 Perl distributions.
@@ -484,6 +488,182 @@ vr711740.24o.gz                           Sat Jun 22 00:00:00 2024    Wed Jul 10
   368 days       1
 ```
 
+
+
+## IGS style index and meta data extraction - `scanrnx32`
+
+The Perl script `scanrnx32.pl` is designed to create two styles of index files,
+an IGS style index file and an inverted format, and optionally extract and
+tabulate meta data from the rinex file headers. 
+
+The syntax is given by the `scanrnx32 -h` command
+
+```
+scanrnx32.pl                                            (Version: 20250705)
+------------
+Extract meta data from one or more RINEX files .
+Syntax:
+    scanrnx32.pl [-i] [-m] [-v] [-h|?] file-patterns
+
+    -i[ndex]........IGS stye index (default yes), use -noi[ndex] to disable.
+    -q[uantity] <m> Give the filesize in index in bins of <m> Mb instead of latency.
+    -x              CSV style of index.
+    -m[eta].........Print meta data (default no).
+    -s[n]...........Print also serial and version numbers (default no).
+    -c[rd]..........Print also a-priori coordinates (default no).
+    -v[erbose]......Verbose mode (extra debugging output).
+    -?|h|help.......This help.
+
+    file-patterns...Input files (wildcards and csh style globbing allowed).
+
+Examples:
+  scanrnx32.pl 2002/???/*.*
+  scanrnx32.pl -noi -m 2002/???/{delf,eijs}*.*
+
+(c) 2000-2025 Hans van der Marel, Delft University of Technology.
+```
+
+Examples using the IGS style of index files are 
+
+```
+$ ./scanrnx32.pl /d/Iceland/DATAPACK/2_GPS/00_DATA/2024/02_RINEX/*.gz
+*****  1 A A A B B B B B B B B F G H K K K K K K K L L L L L L L L L L L L L L L L L L L M M M M N R R R S S S T T T T T T T T T T T T V V
+ DUT   0 M U U F F F F F F F J M R I 0 B M M M R V 1 1 1 1 2 5 5 5 5 6 6 6 6 6 6 6 H H V U Y Y Y A A A A K K P 5 H H H H R R R R R R R I R
+*****  0 T S S 0 0 1 1 1 1 2 A 1 A T 8 1 D D D A 2 0 1 2 5 0 9 9 9 9 0 7 7 8 8 9 9 N S 2 L E V V M H N U H I B 1 1 E H R 0 1 2 2 3 G G T 7
+       8 M B H 1 9 0 3 8 9 0 C 5 E R 9 1 A B C C 0 2 9 3 7 5 5 7 8 9 3 1 8 4 5 7 9 C A 0 A L A N A O D H O L C 7 7 R Y C 1 6 3 4 2 1 2 I 1
+****************************************************************************************************************************************** Last update: Sat Jul  5 20:14:12 2025   (25-186)
+24-181 . . . . . . . . . . . * . . . . . . . . * . . . . . . . . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+24-180 . . . . . . . . . . . * . . . . . . . . * . . . . . . . . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+24-179 . . . . . * . . . . . * . . . . . . . . * . . . . . * . . . . . . . . . . . * . . . . * . . . * . . . * . . . . * . * . . . . . . .
+24-178 . . . . . * . . . . . * . . . . . . . . * . . . . . * . . . . . . . . . . . * . . . . * . . . * . * . * . . * . * * * * * * * * . .
+24-177 . . . . . * . * . . . * . . * . . . . . * . . . . . * . . . . . . . . . . . * . . . . * . * . * . * . * . . * . * * * * * * * * * .
+24-176 . . . . . * . * * . . * . . * . . . . . * . . . * . * . . . . * . . . . . * * . . . . * . * . * . * . * * . * . * * * * * * * * * .
+24-175 . . . . * . * * * . . * . . * . . . . . * . . . * * . . . . . * * . . . . * * . . . . * . * . . . * . * * * * . * * . * * * * * * .
+24-174 . . . . * . * * * . . * . * . . . . . . * . . * * * . . . . . * * . . . . * . . . . . * * * . . . . * * * * . . * * . . . * . . * *
+24-173 . . . . * . * . * * * * . * . . . . . . * * . * * * . . . . . * * * . . . * * * * * * * * * . . * . * * . * . * * * . . . . . . . *
+24-172 . * * * * * * . . * * * . * . . . . . . * * . * . * . . . * . . * * . . . . * * * * * * * . . . . . . * . . . * * . . . . . . . . *
+24-171 . * * * . . . . . * * * . . . * . . . . * * * * . . . . . * * . . * . . * . * * * * * * * . . . . . . * . . . * * . . . . . . . . *
+24-170 . * * * . . . . . * * * . . . * * . . * * * * . . . . . * * * . . * * . * . * * * * * * . . * . . . . * . . . * * . . . . . . . . .
+24-169 * * * * . . . . . . . * * . . * * . * * * . * . . . . * * * * . . . * * * . * . . . . * . . * . . . . * . . . . * . . . . . . . * .
+24-168 * . . . . . . . . . . * * . . * * * * * * . . . . . . * * . . . . . * * . . * . . . . * . . * . . . . * . . . . * . . . . . . . . .
+24-167 * . . . . . . . . . . * . . . . * * * * * . . . . . . * * . . . . . * * . . * . . . . * . . * . . . . * . . . . * . . . . . . . . .
+24-166 * . . . . . . . . . . * . . . . * * * * * . . . . . . * * . . . . . * * . . * . . . . * . . * . . . . * . . . . * . . . . . . . . .
+24-165 * . . . . . . . . . . * . . . . . * * . * . . . . . . * . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+24-164 . . . . . . . . . . . * . . . . . . . . * . . . . . . . . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+24-163 . . . . . . . . . . . * . . . . . . . . * . . . . . . . . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+24-162 . . . . . . . . . . . * . . . . . . . . * . . . . . . . . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+24-161 . . . . . . . . . . . * . . . . . . . . * . . . . . . . . . . . . . . . . . * . . . . * . . . . . . . * . . . . * . . . . . . . . .
+```
+
+The default is show the latency in days for each station, with an asterix for latencies of 10 days or longer. A (more) useful alternative is 
+to encode the filesize using the `-q #.#` option. In the following example the number *0,1,2,3,..,9* mean filesizes of up to *0.4, 0.8,...,4* Mb,
+an asterix is used if files exceed the available size interval.  
+
+```
+$ ./scanrnx32.pl -q 0.4 /d/Iceland/DATAPACK/2_GPS/00_DATA/2024/02_RINEX/*.gz
+*****  1 A A A B B B B B B B B F G H K K K K K K K L L L L L L L L L L L L L L L L L L L M M M M N R R R S S S T T T T T T T T T T T T V V
+ DUT   0 M U U F F F F F F F J M R I 0 B M M M R V 1 1 1 1 2 5 5 5 5 6 6 6 6 6 6 6 H H V U Y Y Y A A A A K K P 5 H H H H R R R R R R R I R
+*****  0 T S S 0 0 1 1 1 1 2 A 1 A T 8 1 D D D A 2 0 1 2 5 0 9 9 9 9 0 7 7 8 8 9 9 N S 2 L E V V M H N U H I B 1 1 E H R 0 1 2 2 3 G G T 7
+       8 M B H 1 9 0 3 8 9 0 C 5 E R 9 1 A B C C 0 2 9 3 7 5 5 7 8 9 3 1 8 4 5 7 9 C A 0 A L A N A O D H O L C 7 7 R Y C 1 6 3 4 2 1 2 I 1
+****************************************************************************************************************************************** Last update: Sat Jul  5 20:16:12 2025   (25-186)
+24-181 . . . . . . . . . . . 9 . . . . . . . . 8 . . . . . . . . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+24-180 . . . . . . . . . . . 9 . . . . . . . . 8 . . . . . . . . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+24-179 . . . . . 9 . . . . . 9 . . . . . . . . 8 . . . . . 4 . . . . . . . . . . . 9 . . . . 4 . . . 1 . . . * . . . . 4 . 2 . . . . . . .
+24-178 . . . . . * . . . . . 9 . . . . . . . . 8 . . . . . * . . . . . . . . . . . 9 . . . . 4 . . . 3 . 4 . * . . 1 . 4 5 4 1 1 1 1 2 . .
+24-177 . . . . . * . 1 . . . 9 . . 6 . . . . . 8 . . . . . * . . . . . . . . . . . 9 . . . . 4 . 4 . 3 . 7 . * . . 3 . 4 * 5 3 3 3 3 4 1 .
+24-176 . . . . . * . 3 4 . . 9 . . 7 . . . . . 8 . . . 9 . 5 . . . . 1 . . . . . 2 9 . . . . 4 . * . 1 . 7 . * 3 . 3 . 4 * 2 3 3 3 3 4 3 .
+24-175 . . . . 1 . 3 3 * . . 9 . . 3 . . . . . 8 . . . * 1 . . . . . 3 2 . . . . 5 6 . . . . 4 . * . . . 2 . * 3 1 1 . 4 * . 1 1 3 1 1 3 .
+24-174 . . . . 3 . 7 1 * . . 9 . 1 . . . . . . 8 . . 1 * 4 . . . . . 3 7 . . . . 5 . . . . . 4 1 * . . . . 1 * 1 * . . 4 * . . . 1 . . 1 1
+24-173 . . . . 3 . 7 . 5 2 2 9 . 3 . . . . . . 8 2 . 3 * 4 . . . . . 1 7 4 . . . 3 8 4 2 5 5 4 3 5 . . 6 . 3 * . 3 . 9 4 3 . . . . . . . 3
+24-172 . 1 1 1 1 1 3 . . 3 3 9 . 1 . . . . . . 8 5 . 3 . 2 . . . 7 . . 4 * . . . . 7 * 3 9 * 4 3 . . . . . . * . . . * 4 . . . . . . . . 3
+24-171 . 3 3 3 . . . . . 3 3 9 . . . 1 . . . . 8 5 5 2 . . . . . * * . . * . . 0 . 9 * 3 9 * 4 2 . . . . . . * . . . * 4 . . . . . . . . 2
+24-170 . 3 3 3 . . . . . 1 1 9 . . . 3 4 . . 4 8 3 7 . . . . . 1 * * . . 5 4 . 9 . 9 4 1 2 4 4 . . 0 . . . . * . . . 9 4 . . . . . . . . .
+24-169 4 1 1 1 . . . . . . . 9 0 . . 3 9 . 3 2 8 . 2 . . . . 9 5 6 5 . . . * * 4 . 9 . . . . 4 . . * . . . . * . . . . 4 . . . . . . . 3 .
+24-168 * . . . . . . . . . . 9 1 . . 0 9 9 7 4 8 . . . . . . * 4 . . . . . * * . . 9 . . . . 4 . . * . . . . * . . . . 4 . . . . . . . . .
+24-167 * . . . . . . . . . . 9 . . . . 9 9 7 4 8 . . . . . . * 5 . . . . . * * . . 9 . . . . 4 . . * . . . . * . . . . 4 . . . . . . . . .
+24-166 * . . . . . . . . . . 9 . . . . 5 9 7 2 8 . . . . . . * 3 . . . . . 5 * . . 9 . . . . 4 . . 6 . . . . * . . . . 4 . . . . . . . . .
+24-165 3 . . . . . . . . . . 9 . . . . . 1 1 . 8 . . . . . . 4 . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+24-164 . . . . . . . . . . . 9 . . . . . . . . 8 . . . . . . . . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+24-163 . . . . . . . . . . . 9 . . . . . . . . 8 . . . . . . . . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+24-162 . . . . . . . . . . . 9 . . . . . . . . 8 . . . . . . . . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+24-161 . . . . . . . . . . . 9 . . . . . . . . 8 . . . . . . . . . . . . . . . . . 9 . . . . 4 . . . . . . . * . . . . 4 . . . . . . . . .
+```
+
+A different style of index is obtained with the `-x` flag (the output is truncated for brevity)
+
+```
+$ ./scanrnx32.pl -x -q 0.4 /d/Iceland/DATAPACK/2_GPS/00_DATA/2024/02_RINEX/*.gz
+*****  2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+ DUT   4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+*****  - - - - - - - - - - - - - - - - - - - - -
+       1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+       6 6 6 6 6 6 6 6 6 7 7 7 7 7 7 7 7 7 7 8 8
+       1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+************************************************ Last update: Sat Jul  5 20:27:10 2025
+1008   . . . . 3 * * * 4 . . . . . . . . . . . .
+AMTM   . . . . . . . . 1 3 3 1 . . . . . . . . .
+AUSB   . . . . . . . . 1 3 3 1 . . . . . . . . .
+AUSH   . . . . . . . . 1 3 3 1 . . . . . . . . .
+BF01   . . . . . . . . . . . 1 3 3 1 . . . . . .
+...
+VITI   . . . . . . . . 3 . . . . 1 3 3 1 . . . .
+VR71   . . . . . . . . . . 2 3 3 1 . . . . . . .
+
+       2
+       4
+********
+1008   5
+AMTM   4
+AUSB   4
+AUSH   4
+BF01   4
+...
+VITI   5
+VR71   4
+```
+
+The second table shows the number of files in each year. 
+
+With the `-m` option a table with the meta data from the rinex file headers is shown (the `-noi` 
+is used here to suppress the index). The example below shows the meta data for all stations
+with a station name starting with *bf*.
+
+```
+$ ./scanrnx32.pl -noi -m /d/Iceland/DATAPACK/2_GPS/00_DATA/2024/02_RINEX/bf*.gz
+filename    types  markername          number    receiver type       antenna type           height
+----------- -----  ------------------- --------- ------------------- -------------------- --------
+BF011720.24 o . .  BF01                BF01      TRIMBLE 5700        TRM41249.00     NONE   1.2225
+BF011730.24 o . .  BF01                BF01      5700                TRM41249.00     NONE   1.2225
+BF011740.24 o . .  BF01                BF01      5700                TRM41249.00     NONE   1.2225
+BF011750.24 o . .  BF01                BF01      5700                TRM41249.00     NONE   1.2225
+BF091720.24 o . .  BF09                BF09      TRIMBLE R7          TRM41249.00     NONE   1.1281
+BF091760.24 o . .  BF09                BF09      SEPT POLARX5        TRM115000.10    NONE   1.1999
+BF091770.24 o . .  BF09                BF09      SEPT POLARX5        TRM115000.10    NONE   1.1999
+BF091780.24 o . .  BF09                BF09      SEPT POLARX5        TRM115000.10    NONE   1.1999
+BF091790.24 o . .  BF09                BF09      SEPT POLARX5        TRM115000.10    NONE   1.1999
+BF101720.24 o . .  BF10                BF10      TRIMBLE R7 GNSS     TRM57971.00     NONE   1.2686
+BF101730.24 o . .  BF10                BF10      TRIMBLE R7 GNSS     TRM57971.00     NONE   1.2686
+BF101740.24 o . .  BF10                BF10      TRIMBLE R7 GNSS     TRM57971.00     NONE   1.2686
+BF101750.24 o . .  BF10                BF10      TRIMBLE R7 GNSS     TRM57971.00     NONE   1.2686
+BF131740.24 o . .  BF13                BF13      TRIMBLE 5700        TRM41249.00     NONE   1.2238
+BF131750.24 o . .  BF13                BF13      TRIMBLE 5700        TRM41249.00     NONE   1.2238
+BF131760.24 o . .  BF13                BF13      TRIMBLE 5700        TRM41249.00     NONE   1.2238
+BF131770.24 o . .  BF13                BF13      TRIMBLE 5700        TRM41249.00     NONE   1.2238
+BF181730.24 o . .  BF18                BF18      SEPT POLARX5        TRM41249.00     NONE   1.1670
+BF181740.24 o . .  BF18                BF18      SEPT POLARX5        TRM41249.00     NONE   1.1670
+BF181750.24 o . .  BF18                BF18      SEPT POLARX5        TRM41249.00     NONE   1.1670
+BF181760.24 o . .  BF18                BF18      SEPT POLARX5        TRM41249.00     NONE   1.1670
+BF191700.24 o . .  BF19                BF19      TRIMBLE R7 GNSS     TRM57971.00     NONE   0.9935
+BF191710.24 o . .  BF19                BF19      TRIMBLE R7 GNSS     TRM57971.00     NONE   0.9935
+BF191720.24 o . .  BF19                BF19      TRIMBLE R7 GNSS     TRM57971.00     NONE   0.9935
+BF191730.24 o . .  BF19                BF19      TRIMBLE R7 GNSS     TRM57971.00     NONE   0.9935
+BF201700.24 o . .  BF20                BF20      TRIMBLE R7          TRM41249.00     NONE   1.0711
+BF201710.24 o . .  BF20                BF20      TRIMBLE R7          TRM41249.00     NONE   1.0711
+BF201720.24 o . .  BF20                BF20      TRIMBLE R7          TRM41249.00     NONE   1.0711
+BF201730.24 o . .  BF20                BF20      TRIMBLE R7          TRM41249.00     NONE   1.0711
+```
+
+If the `-s` and/or `-c` flag are added also the serial numbers and/or appproximate coordinates are shown.
 
 
 ## Bulding blocks for GNSS file name globbing - `ydrange`
