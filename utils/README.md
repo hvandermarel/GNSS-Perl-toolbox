@@ -322,7 +322,7 @@ viti  2319/5  173  Fri Jun 21 2024
 Most of the output been suppressed (...) to save space.
 
 
-## GNSS date and time conversion, templates and make files - `ydrange`
+## Bulding blocks for GNSS file name globbing - `ydrange`
 
 The script `ydrange.pl` is a minimalistic Perl script to create comma separated
 lists or building blocks for file name globbing in shell scripts. It is often
