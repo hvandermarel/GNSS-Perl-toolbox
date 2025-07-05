@@ -15,7 +15,27 @@ and Perl modules **librnxio.pm** with functions for reading and writing RINEX ve
 
 ### GNSS date, time and file management utilities
 
-The subdirectory `utils` will contain in a future release several Perl scripts for GNSS date, time and file management.
+The subdirectory `utils` contains Perl scripts for GNSS date, time and file management.
+The script fall in two groups. 
+
+Scripts that share the more general file template processing:
+
+- `gpstime.pl` GNSS date and time conversion, file templates, and make file creation
+- `gpsdir.pl` GNSS directory listing 
+- `gpsdircmp.pl` GNSS directory comparison with different file formats
+- `gpslatency.pl` GNSS file latency 
+- `ydrange.pl` comma separated list of (files with) year-month-day information
+
+These scripts depend on the `libgpstime.pm` Perl module for processing file templates and date/time conversion.
+The module must be installed in the same directory as the scripts. 
+
+Script that works with RINEX version 2 short and version 3 long filenames, and support for Hatanaka, unix or gzip
+compression
+
+- `scanrnx32.pl` Make IGS style index files and extract meta data from RINEX version 2 and 3 files
+
+Other Perl dependencies are the modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are included by most, if not all, 
+Perl distributions.
 
 ## Installation
 
