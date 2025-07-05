@@ -8,10 +8,11 @@ and/or day of month information:
 - `gpsdircmp.pl` comparison of two directories with GNSS files in different formats
 - `ydrange.pl` generate a comma separated list of (files with) year-month-day information
 
-Most of the scripts depend on the `libgpstime.pm` Perl module for precessing the file templates and date/time conversion.
+Most of the scripts depend on the `libgpstime.pm` Perl module for processing the file templates and date/time conversion.
 The module must be installed in the same directory as the scripts. 
 
-Other dependecies are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are very common and included by most Perl distributions.
+Other dependencies are the Perl modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are included by most, if not all, 
+Perl distributions.
 
 
 ## GNSS date and time conversion, templates and make files - `gpstime`
@@ -85,9 +86,9 @@ Syntax:
     yr,doy..........Two digit year and day of year
     sessid,SESSID...Session id [a-x], [A-X] or digit
     hour............Two digit hour
-    min             Two digit minute
+    min.............Two digit minute
     ext.............Extention, file type, etc. (one or more characters)
-    wldc            Anything that is not zero or more digits
+    wldc............Anything that is not zero or more digits
   Additional variables for output templates (not for source templates):
     iso.............Date and time in ISO format
     dir.............Directory in -d option
@@ -114,6 +115,39 @@ source template is set to (year)(doy)
 Date=2023-06-26 GPSweek/dow=2268/1 doy=177
 $ ./gpstime.pl -s "(sta4)(doy)0.(yr)o"  -t "(STA4)00NLD_R_(year)(doy)0000_01D_30S_MO.rnx"   delf1140.25o
 DELF00NLD_R_20251140000_01D_30S_MO.rnx
+```
+
+Example working with files:
+
+```
+$ ./gpstime.pl -s "(sta4)(doy)(sessid).(yr)(ext).gz" \
+         -t "(source) : (year)-(month)-(day)  (doy)  (week)/(dow)" ./2024/02_RINEX/*.gz
+./2024/02_RINEX/10081650.24o.gz : 2024-06-13  165  2318/4
+./2024/02_RINEX/10081660.24o.gz : 2024-06-14  166  2318/5
+./2024/02_RINEX/10081670.24o.gz : 2024-06-15  167  2318/6
+./2024/02_RINEX/10081680.24o.gz : 2024-06-16  168  2319/0
+./2024/02_RINEX/10081690.24o.gz : 2024-06-17  169  2319/1
+./2024/02_RINEX/amtm1690.24o.gz : 2024-06-17  169  2319/1
+./2024/02_RINEX/amtm1700.24o.gz : 2024-06-18  170  2319/2
+./2024/02_RINEX/amtm1710.24o.gz : 2024-06-19  171  2319/3
+./2024/02_RINEX/amtm1720.24o.gz : 2024-06-20  172  2319/4
+...
+```
+
+Another example working with files, showing how to create a script for moving
+files into another folder scructure. Capture the output in a file, and run this
+as a script (after checking it does what you want):
+
+```
+$ ./gpstime.pl -s "(sta4)(doy)(sessid).(yr)(ext).gz" -t "mv (source) ./(year)/(STA4)/" ./2024/02_RINEX/*.gz
+mv ./2024/02_RINEX/10081650.24o.gz ./2024/1008/
+mv ./2024/02_RINEX/10081660.24o.gz ./2024/1008/
+mv ./2024/02_RINEX/10081670.24o.gz ./2024/1008/
+mv ./2024/02_RINEX/10081680.24o.gz ./2024/1008/
+mv ./2024/02_RINEX/10081690.24o.gz ./2024/1008/
+mv ./2024/02_RINEX/amtm1690.24o.gz ./2024/AMTM/
+mv ./2024/02_RINEX/amtm1700.24o.gz ./2024/AMTM/
+...
 ```
 
 More complex examples for creating make files:
@@ -212,9 +246,9 @@ Supported variables in templates (must be embedded in parenthesis):
   yr,doy..........Two digit year and day of year
   sessid,SESSID...Session id [a-x], [A-X] or digit
   hour............Two digit hour
-  min             Two digit minute
+  min.............Two digit minute
   ext.............Extention, file type, etc. (one or more characters)
-  wldc            Anything that is not zero or more digits
+  wldc............Anything that is not zero or more digits
 
 Examples of templates:
   (sta4)(week)(dow).tbi

@@ -233,9 +233,9 @@ Syntax:
     yr,doy..........Two digit year and day of year
     sessid,SESSID...Session id [a-x], [A-X] or digit 
     hour............Two digit hour 
-    min             Two digit minute
+    min.............Two digit minute
     ext.............Extention, file type, etc. (one or more characters)
-    wldc            Anything that is not zero or more digits
+    wldc............Anything that is not zero or more digits
   Additional variables for output templates (not for source templates):
     iso.............Date and time in ISO format  
     dir.............Directory in -d option  
