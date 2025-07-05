@@ -197,6 +197,90 @@ as needed and are usually stored as file with `mrl` extension in a safe place fo
 further reuse.
 
 
+## GNSS directory listing - `gpsdir`
+
+This Perl script makes a generalized directory listing for GNSS files
+using the date and time information in the filenames.
+
+By typing `gpsdir -h` in a terminal (or on some systems `./gpsdir.pl -h`) a short help is provided
+
+```
+gpsdir.pl                                            (Version: 20250705)
+---------
+Make a generalized "directory listing" for GNSS specific files
+which use either "week/dow", "doy" or "year, month, day" formats.
+Syntax:
+  gpsdir.pl [-d <Dir>] [-s <Tpl>] [-[e|i] <Pattern>] File [[Files]]
+
+  -d <Dir>........Specifies the directory where the input files reside.
+  -s <Tpl>........Source template for the input files or strings.
+  -i <pattern>....Pattern to include files from processing (optional).
+  -e <pattern>....Pattern to exclude files from processing (optional).
+  -?|h|help.......This help.
+
+wildcards in the file specification are allowed. The source template is
+determined automatically from the filenames.
+
+Examples:
+  gpsdir.pl -s (sta)/(week)(dow)000.cbi -d refsta delf/*.cbi
+  gpsdir.pl -s (year)/(doy)/(sta4)(doy)(sessid).(yr)d
+                                       rinex/2002/???/delf*.02d.Z
+
+Supported variables in templates (must be embedded in parenthesis):
+  sta4,STA4,Sta4..4 letter station abbreviation
+  MRCCC.......... 5 letter Rinex-3 monument/receiver/country code
+  week,dow........GPS week and day of week
+  year,month,day..Date information
+  MONTH...........Three-letter abbreviation for month
+  yr,doy..........Two digit year and day of year
+  sessid,SESSID...Session id [a-x], [A-X] or digit
+  hour............Two digit hour
+  min.............Two digit minute
+  ext.............Extention, file type, etc. (one or more characters)
+  wldc............Anything that is not zero or more digits
+
+(c) 2003-2025 Hans van der Marel, Delft University of Technology.
+```
+
+An example is shown below (with reduced output):
+
+```
+$ ./gpsdir.pl -d ./2024/02_RINEX/ -s "(sta4)(doy)0.(yr)(ext)" *.24o.gz
+sta4 week/d doy  date              0         1         2
+---- ------ ---  ---------------  D012345678901234567890123
+1008 2318/4 165  Thu Jun 13 2024  0
+1008 2318/5 166  Fri Jun 14 2024  0
+1008 2318/6 167  Sat Jun 15 2024  0
+1008 2319/0 168  Sun Jun 16 2024  0
+1008 2319/1 169  Mon Jun 17 2024  0
+amtm 2319/1 169  Mon Jun 17 2024  0
+amtm 2319/2 170  Tue Jun 18 2024  0
+amtm 2319/3 171  Wed Jun 19 2024  0
+...
+vr71 2319/5 173  Fri Jun 21 2024  0
+vr71 2319/6 174  Sat Jun 22 2024  0
+
+sta4 week  0123456
+---- ----  -------
+1008 2318      000
+1008 2319  00
+amtm 2319   0000
+ausb 2319   0000
+...
+viti 2319   0    0
+viti 2320  000
+vr71 2319     0000
+
+Missing days:
+
+sta4  date             week/d doy
+----  ---------------  ------ ---
+bf09  Fri Jun 21 2024  2319/5 173
+bf09  Sat Jun 22 2024  2319/6 174
+...
+viti  Fri Jun 21 2024  2319/5 173
+```
+
 ## GNSS directory comparison - `gpsdircmp`
 
 This Perl script compares two directories (or directory listing) with GNSS filenames and
@@ -320,6 +404,84 @@ viti  2319/5  173  Fri Jun 21 2024
 ```
 
 Most of the output been suppressed (...) to save space.
+
+## GNSS file latency - `gpslatency`
+
+This script makes a listing of GNSS files with their latency. The
+latency is computed by comparing the date and time information from the 
+filenames to the os timestamp of the file. 
+
+By typing `gpslatency -h` in a terminal (or on some systems `./gpslatency.pl -h`) a short help is provided
+
+```
+gpslatency.pl                                            (Version: 20250705)
+-------------
+Make a directory listing of GNSS specific files which use either
+"week/dow", "doy" or "year, month, day" formats with file latency
+data.
+Syntax:
+  gpslatency.pl [-d <Dir>] [-s <Tpl>] [-[e|i] <Pattern>] File [[Files]]
+
+  -d <Dir>........Specifies the directory where the input files reside.
+  -s <Tpl>........Source template for the input files or strings.
+  -i <pattern>....Pattern to include files from processing (optional).
+  -e <pattern>....Pattern to exclude files from processing (optional).
+  -l <minutes>....File interval in minutes (default is 60 minutes).
+  -c <minutes>....Only print files that are later than this limit.
+  -?|h|help.......This help.
+
+wildcards in the file specification are allowed. The source template is
+determined automatically from the filenames.
+
+Examples:
+  gpslatency.pl -s (sta)/(week)(dow)000.cbi -d refsta delf/*.cbi
+  gpslatency.pl -s (year)/(doy)/(sta4)(doy)(sessid).(yr)d
+                                       rinex/2002/???/delf*.02d.Z
+
+Supported variables in templates (must be embedded in parenthesis):
+  sta4,STA4,Sta4..4 letter station abbreviation
+  MRCCC.......... 5 letter Rinex-3 monument/receiver/country code
+  week,dow........GPS week and day of week
+  year,month,day..Date information
+  MONTH...........Three-letter abbreviation for month
+  yr,doy..........Two digit year and day of year
+  sessid,SESSID...Session id [a-x], [A-X] or digit
+  hour............Two digit hour
+  min.............Two digit minute
+  ext.............Extention, file type, etc. (one or more characters)
+  wldc............Anything that is not zero or more digits
+
+(c) 2003-2025 Hans van der Marel, Delft University of Technology.
+```
+
+An example is shown below (with reduced output):
+
+```
+$ ./gpslatency.pl -d ./2024/02_RINEX/ -s "(sta4)(doy)0.(yr)(ext)" *.24o.gz
+Filename                                  First Epoch                 Received                       Latency  Delay(sec)    Dirname
+----------------------------------------  --------------------------  --------------------------  ----------  ----------    -------------
+10081650.24o.gz                           Thu Jun 13 00:00:00 2024    Wed Jul 10 11:32:00 2024       27 days     2287920    ./2024/02_RINEX
+10081660.24o.gz                           Fri Jun 14 00:00:00 2024    Wed Jul 10 11:32:00 2024       26 days     2201520    ./2024/02_RINEX
+10081670.24o.gz                           Sat Jun 15 00:00:00 2024    Wed Jul 10 11:32:00 2024       25 days     2115120    ./2024/02_RINEX
+10081680.24o.gz                           Sun Jun 16 00:00:00 2024    Wed Jul 10 11:32:00 2024       24 days     2028720    ./2024/02_RINEX
+10081690.24o.gz                           Mon Jun 17 00:00:00 2024    Wed Jul 10 11:32:00 2024       23 days     1942320    ./2024/02_RINEX
+amtm1690.24o.gz                           Mon Jun 17 00:00:00 2024    Wed Jul 10 11:32:00 2024       23 days     1942320    ./2024/02_RINEX
+amtm1700.24o.gz                           Tue Jun 18 00:00:00 2024    Wed Jul 10 11:32:00 2024       22 days     1855920    ./2024/02_RINEX
+amtm1710.24o.gz                           Wed Jun 19 00:00:00 2024    Wed Jul 10 11:32:00 2024       21 days     1769520    ./2024/02_RINEX
+...
+vr711730.24o.gz                           Fri Jun 21 00:00:00 2024    Wed Jul 10 11:36:00 2024       19 days     1596960    ./2024/02_RINEX
+vr711740.24o.gz                           Sat Jun 22 00:00:00 2024    Wed Jul 10 11:36:00 2024       18 days     1510560    ./2024/02_RINEX
+
+   Latency   Count
+----------   -----
+   13 days       4
+   14 days      12
+   15 days      16
+...
+  367 days       5
+  368 days       1
+```
+
 
 
 ## Bulding blocks for GNSS file name globbing - `ydrange`
