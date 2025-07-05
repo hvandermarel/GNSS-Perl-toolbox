@@ -5,8 +5,10 @@ specifically on GNSS files that include year, day of year, week, day of week, mo
 and/or day of month information:
 
 - `gpstime.pl` GNSS date and time conversion, file templates, and make file creation
-- `gpsdircmp.pl` comparison of two directories with GNSS files in different formats
-- `ydrange.pl` generate a comma separated list of (files with) year-month-day information
+- `gpsdir` GNSS directory listing 
+- `gpsdircmp.pl` GNSS directory comparison with different file formats
+- `gpslatency.pl` GNSS file latency 
+- `ydrange.pl` comma separated list of (files with) year-month-day information
 
 Most of the scripts depend on the `libgpstime.pm` Perl module for processing the file templates and date/time conversion.
 The module must be installed in the same directory as the scripts. 
