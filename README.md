@@ -23,7 +23,7 @@ compression)
 
 - `scanrnx32.pl` Make IGS style index files and extract meta data from RINEX version 2 and 3 files
 
-Scripts that share the more general file template processing:
+Scripts that share the more general file template processing (provided by `libgpstime.pm`):
 
 - `gpstime.pl` GNSS date and time conversion, file templates, and make file creation
 - `gpsdir.pl` GNSS directory listing 
@@ -31,7 +31,7 @@ Scripts that share the more general file template processing:
 - `gpslatency.pl` GNSS file latency 
 - `ydrange.pl` comma separated list of (files with) year-month-day information
 
-These scripts depend on the `libgpstime.pm` Perl module for processing file templates and date/time conversion.
+The second set of scripts depend on the `libgpstime.pm` Perl module for processing file templates and date/time conversion.
 The module must be installed in the same directory as the scripts. 
 
 ### GNSS raw data parsers
@@ -58,7 +58,7 @@ Perl is not installed by default on Microsoft windows. To use the scripts you ha
 
 Another option is to install *Matlab*. *Matlab* comes with Perl on-board and you can use Perl from the Matlab terminal.
 
-### Perl dependencies
+## Perl dependencies
 
 The main Perl dependencies are the modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are part of core Perl and included by most, if not all, 
 Perl distributions.
