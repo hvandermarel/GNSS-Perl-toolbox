@@ -52,7 +52,8 @@ To use the scripts you do not need to have any Perl knowledge, but you need to h
 
 ### Linux, Mac, other unix
 
-Perl is installed by default on most Linux distributions and Mac. Simply copy the scripts to a folder in your path and they should work. Keep the libraries within the same folder as the scripts.
+Perl is installed by default on most Linux distributions and Mac. Simply copy the scripts to a folder in your path and they should work. Keep the libraries within the same folder as the scripts or put
+them somewhere Perl can find them (see Hints and tips below).
 
 ### Microsoft windows
 
@@ -60,7 +61,7 @@ Perl is not installed by default on Microsoft windows. To use the scripts you ha
 
 Another option is to use [Matlab](https://www.mathworks.com/products/matlab.html) if you have that already installed. Matlab comes with Perl on-board and you can use Perl from the Matlab command window.
 
-If you plan to use the Windows command prompt, please read on. 
+If you plan to use the Windows command prompt, please read on. If using a bash shell terminal, jump to hints and tips.
 
 In the Windows command prompt (but *not* in a MSYS2/MinGW64 terminal or WSL) you have to run the scripts with a command like `perl script.pl .-options arg`. If you find this 
 inconvenient you can create a small (executable) batch file with the same name as the script but extension `.bat`, with the following content
@@ -89,7 +90,7 @@ link, without extension, to the actual script file with extension.
 For modules this is completely different, never remove the `.pm` extension, Perl relies on this.
 
 
-### Perl dependencies
+## Perl dependencies
 
 The main Perl dependencies are the modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are part of core Perl and included by most, if not all, 
 Perl distributions.
