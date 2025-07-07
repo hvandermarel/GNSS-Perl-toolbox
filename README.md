@@ -5,7 +5,7 @@ GNSS Perl toolbox with rinex editing, filtering, statistics, time and file conve
 
 ### RINEX file editing, filtering and conversion
 
-The subdirectory `rinex` contains Perl scripts for pre-processing RINEX observation files
+The subdirectory [`rinex`](rinex/) contains Perl scripts for pre-processing RINEX observation files
 
 - `rnxedit.pl`: RINEX observation file editing, filtering and conversion for RINEX version 2, 3 and 4 observation files
 - `rnxstats.pl`: RINEX observation statistics with number of epochs, satellites and observations
@@ -15,7 +15,7 @@ and Perl modules `librnxio.pm` with functions for reading and writing RINEX vers
 
 ### GNSS date, time and file management utilities
 
-The subdirectory `utils` contains Perl scripts for GNSS date, time and file management.
+The subdirectory [`utils`](utils/) contains Perl scripts for GNSS date, time and file management.
 The script fall in two groups. 
 
 Script that works with RINEX version 2 short and version 3 long filenames (including support for Hatanaka, unix or gzip
@@ -36,7 +36,7 @@ The module must be installed in the same directory as the scripts.
 
 ### GNSS raw data parsers
 
-The subdirectory `raw` contains a couple of Perl scripts to parse binary raw GNSS data files. 
+The subdirectory [`raw`](raw/) contains a couple of Perl scripts to parse binary raw GNSS data files. 
 
 - `sbfparse.pl` Parse Septentrio Binary Format files and optionally extract ISMR (scintillation) records
 
