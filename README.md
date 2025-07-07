@@ -36,15 +36,13 @@ The module must be installed in the same directory as the scripts.
 
 ### GNSS raw data parsers
 
-The subdirectory `raw` contains a couple of Perl scripts to parse and concatenate binary raw
-GNSS data files. Some of the files are very old and only provided as-is in case there is still a use for them.
-Others, such as `sbfparse.pl`, used for parsing Septentrio Binary Format files and optionally extract ISMR (scintillation) records
-data are more actively supported.
+The subdirectory `raw` contains a couple of Perl scripts to parse binary raw GNSS data files. 
 
-### Perl dependencies
+- `sbfparse.pl` Parse Septentrio Binary Format files and optionally extract ISMR (scintillation) records
 
-Perl dependencies are the modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are included by most, if not all, 
-Perl distributions.
+The other scripts, for parsing and concatenating Turbo binary, Trimble dat files or Javad/Topcon raw data files, 
+are very old and only provided as-is in case there is still a use for them.
+
 
 ## Installation
 
@@ -56,7 +54,11 @@ Perl is installed by default on most Linux distributions and Mac. Simply copy th
 
 ### Microsoft windows
 
-Perl is not installed by default on Microsoft windows. To use the scripts you have either to install *Strawberry Perl* (comes with MinGW), *ActiveState Perl*, *MingW* (Minimalist GNU for Windows) or use *WSL* (Windows subsystem for Linux).
+Perl is not installed by default on Microsoft windows. To use the scripts you have either to install *MSYS2/MingW64* (Minimalist GNU for Windows), *Strawberry Perl* (comes with MSYS2/MinGW64), *ActiveState Perl*, , use *WSL* (Windows subsystem for Linux) or run the scripts from the Git bash shell prompt (also MSYS2/MinGW64). 
 
 Another option is to install *Matlab*. *Matlab* comes with Perl on-board and you can use Perl from the Matlab terminal.
 
+### Perl dependencies
+
+The main Perl dependencies are the modules `Getopt::Long`, `File::Basename` and `Time::Local`. These module are part of core Perl and included by most, if not all, 
+Perl distributions.
